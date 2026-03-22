@@ -1,0 +1,1066 @@
+import 'dart:io';
+import 'package:flutter/material.dart';
+import '../db_helper.dart';
+import 'add_trip_screen.dart';
+import 'add_member_screen.dart';
+import 'add_expense_screen.dart';
+import 'report_screen.dart';
+import 'profile_screen.dart';
+import 'about_screen.dart';
+import 'privacy_screen.dart';
+import 'support_screen.dart';
+import 'login_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../utils/backup_service.dart';
+import '../utils/app_info.dart';
+import '../utils/app_toast.dart';
+
+// import '../utils/google_drive_backup.dart';
+class DashboardScreen extends StatefulWidget {
+  final int userId;
+  final String userName;
+  DashboardScreen({required this.userId, required this.userName});
+
+  @override
+  _DashboardScreenState createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
+  List<Map<String, dynamic>> trips = [];
+  Map<int, double> tripDeposits = {};
+  int totalMembers = 0;
+  double totalExpense = 0;
+  double totalDeposit = 0;
+  int _selectedIndex = 0;
+  final GlobalKey<RefreshIndicatorState> _refreshKey =
+      GlobalKey<RefreshIndicatorState>();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTrips();
+  }
+
+  Future<void> _loadTrips() async {
+    var tripData = await DBHelper.instance.getAll(
+      'trips',
+      where: 'userId = ?',
+      whereArgs: [widget.userId],
+    );
+
+    var members = await DBHelper.instance.getAll(
+      'members',
+      where: 'tripId IN (SELECT id FROM trips WHERE userId = ?)',
+      whereArgs: [widget.userId],
+    );
+
+    var expenses = await DBHelper.instance.getAll(
+      'expenses',
+      where: 'tripId IN (SELECT id FROM trips WHERE userId = ?)',
+      whereArgs: [widget.userId],
+    );
+    double sumDeposit = 0;
+    tripDeposits.clear();
+
+    for (var m in members) {
+      int tripId = m['tripId'];
+
+      double payAmount = (m['payAmount'] ?? 0).toDouble();
+
+      double ledgerDeposit = await DBHelper.instance.getMemberDeposit(
+        tripId,
+        m['id'],
+      );
+
+      double ledgerWithdraw = await DBHelper.instance.getMemberWithdraw(
+        tripId,
+        m['id'],
+      );
+
+      double memberDeposit = payAmount + ledgerDeposit - ledgerWithdraw;
+
+      sumDeposit += memberDeposit;
+
+      tripDeposits[tripId] = (tripDeposits[tripId] ?? 0) + memberDeposit;
+    }
+    double sumExpense = 0;
+
+    for (var e in expenses) {
+      sumExpense += (e['amount'] ?? 0);
+    }
+
+    setState(() {
+      trips = tripData;
+      totalMembers = members.length;
+      totalExpense = sumExpense;
+      totalDeposit = sumDeposit;
+    });
+  }
+
+  void _logout() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+
+    await prefs.clear();
+
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => LoginScreen()),
+      (route) => false,
+    );
+  }
+
+  // void _openProfile() {
+  //   Navigator.push(
+  //     context,
+  //     MaterialPageRoute(
+  //       builder: (_) => ProfileScreen(
+  //         userId: widget.userId,
+  //         userName: widget.userName,
+  //         onLogout: _logout,
+  //       ),
+  //     ),
+  //   );
+  // }
+
+  IconData _categoryIcon(String? category) {
+    switch (category?.toLowerCase()) {
+      case "food":
+        return Icons.fastfood;
+
+      case "travel":
+        return Icons.directions_car;
+
+      case "hotel":
+        return Icons.hotel;
+
+      case "shopping":
+        return Icons.shopping_bag;
+
+      default:
+        return Icons.currency_rupee;
+    }
+  }
+
+  Widget _getBody() {
+    if (_selectedIndex == 1) {
+      return AddTripScreen(userId: widget.userId);
+    }
+
+    if (_selectedIndex == 2) {
+      return ProfileScreen(
+        userId: widget.userId,
+        userName: widget.userName,
+        onLogout: _logout,
+      );
+    }
+
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(), // 👈 IMPORTANT
+      children: [_buildStats(), _recentExpenses(), _buildTripList()],
+    );
+  }
+
+  Widget _statCard(String title, String value, IconData icon) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 6)],
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: Colors.teal),
+
+            const SizedBox(height: 6),
+
+            /// VALUE (Auto resize)
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.teal,
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 2),
+
+            Text(
+              title,
+              style: TextStyle(color: Colors.grey[600], fontSize: 12),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStats() {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        children: [
+          _statCard("Total", trips.length.toString(), Icons.card_travel),
+
+          const SizedBox(width: 10),
+
+          _statCard("Members", totalMembers.toString(), Icons.group),
+
+          const SizedBox(width: 10),
+
+          _statCard(
+            "Expense",
+            "₹${totalExpense.toStringAsFixed(0)}",
+            Icons.currency_rupee,
+          ),
+
+          const SizedBox(width: 10),
+
+          _statCard(
+            "Deposit",
+            "₹${totalDeposit.toStringAsFixed(0)}",
+            Icons.account_balance_wallet,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _recentExpenses() {
+    return FutureBuilder(
+      future: DBHelper.instance.getAll(
+        'expenses',
+        where: 'tripId IN (SELECT id FROM trips WHERE userId = ?)',
+        whereArgs: [widget.userId],
+      ),
+      builder: (context, AsyncSnapshot<List<Map<String, dynamic>>> snap) {
+        if (!snap.hasData || snap.data!.isEmpty) return SizedBox();
+
+        var data = snap.data!;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                "Recent Expenses",
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.teal,
+                ),
+              ),
+            ),
+
+            SizedBox(height: 12),
+
+            SizedBox(
+              height: 110,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: EdgeInsets.symmetric(horizontal: 16),
+                itemCount: data.length > 5 ? 5 : data.length,
+                itemBuilder: (context, index) {
+                  var e = data[index];
+
+                  return Container(
+                    width: 160,
+                    margin: EdgeInsets.only(right: 10),
+
+                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).cardColor,
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: [
+                        BoxShadow(color: Colors.black12, blurRadius: 5),
+                      ],
+                    ),
+
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 14,
+                              backgroundColor: Colors.teal.shade100,
+                              child: Icon(
+                                _categoryIcon(e['category']),
+                                size: 16,
+                                color: Colors.teal,
+                              ),
+                            ),
+
+                            Spacer(),
+
+                            Text(
+                              "₹${e['amount']}",
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.teal,
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        SizedBox(height: 8),
+
+                        Text(
+                          e['description'] ?? "",
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: Colors.teal,
+                          ),
+                        ),
+
+                        Text(
+                          e['category'] ?? "",
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+
+            SizedBox(height: 10),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildTripList() {
+    if (trips.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.all(30),
+
+        child: Center(
+          child: Text(
+            "No expense added yet.\nClick + to add your first expense!",
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    }
+
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+
+      padding: const EdgeInsets.all(16),
+
+      itemCount: trips.length,
+
+      itemBuilder: (context, index) {
+        var t = trips[index];
+
+        return _buildTripCard(t);
+      },
+    );
+  }
+
+  Widget _buildTripCard(Map<String, dynamic> t) {
+    return FutureBuilder(
+      future: Future.wait([
+        DBHelper.instance.getAll(
+          'expenses',
+          where: 'tripId = ?',
+          whereArgs: [t['id']],
+        ),
+
+        DBHelper.instance.getAll(
+          'members',
+          where: 'tripId = ?',
+          whereArgs: [t['id']],
+        ),
+      ]),
+
+      builder: (context, AsyncSnapshot<List<dynamic>> snap) {
+        double totalExpense = 0;
+        double totalDeposit = tripDeposits[t['id']] ?? 0;
+        int memberCount = 0;
+        if (snap.hasData) {
+          List<Map<String, dynamic>> expenses = List<Map<String, dynamic>>.from(
+            snap.data![0],
+          );
+
+          List<Map<String, dynamic>> members = List<Map<String, dynamic>>.from(
+            snap.data![1],
+          );
+
+          memberCount = members.length;
+
+          for (var e in expenses) {
+            totalExpense += (e['amount'] ?? 0);
+          }
+        }
+
+        double perPerson = memberCount == 0 ? 0 : totalExpense / memberCount;
+
+        return InkWell(
+          borderRadius: BorderRadius.circular(15),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) =>
+                    ReportScreen(tripId: t['id'], tripName: t['name']),
+              ),
+            );
+          },
+          child: Stack(
+            children: [
+              Container(
+                margin: const EdgeInsets.symmetric(vertical: 8),
+
+                padding: const EdgeInsets.all(14),
+
+                decoration: BoxDecoration(
+                  color: Theme.of(context).cardColor,
+
+                  borderRadius: BorderRadius.circular(14),
+
+                  boxShadow: const [
+                    BoxShadow(color: Colors.black12, blurRadius: 6),
+                  ],
+                ),
+
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+
+                  children: [
+                    /// TRIP NAME ROW
+                    Row(
+                      children: [
+                        const Icon(Icons.card_travel, color: Colors.teal),
+
+                        const SizedBox(width: 6),
+
+                        Expanded(
+                          child: Text(
+                            t['name'] ?? "",
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.teal,
+                            ),
+                          ),
+                        ),
+
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
+
+                          decoration: BoxDecoration(
+                            color: Colors.teal.shade50,
+
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+
+                          child: Text(
+                            "₹${totalExpense.toStringAsFixed(0)}",
+                            style: const TextStyle(
+                              color: Colors.teal,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        SizedBox(width: 6),
+
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.shade50,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            "₹${totalDeposit.toStringAsFixed(0)}",
+                            style: const TextStyle(
+                              color: Colors.orange,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 28),
+                      ],
+                    ),
+
+                    const SizedBox(height: 6),
+
+                    /// DESTINATION
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.location_on,
+                          size: 16,
+                          color: Colors.grey,
+                          fontWeight: FontWeight.bold,
+                        ),
+
+                        const SizedBox(width: 4),
+
+                        Text(
+                          t['destination'] ?? "",
+                          style: TextStyle(color: Colors.grey[700]),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 6),
+
+                    /// DATE
+                    Text(
+                      "${t['startDate'].split('T')[0]} → ${t['endDate'].split('T')[0]}",
+                      style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    /// STATS ROW
+                    Row(
+                      children: [
+                        Icon(Icons.group, size: 16, color: Colors.grey[600]),
+
+                        const SizedBox(width: 4),
+
+                        Text("$memberCount Members"),
+
+                        const SizedBox(width: 16),
+
+                        // Icon(Icons.currency_rupee,
+                        //     size:16,
+                        //     color:Colors.grey[600]),
+
+                        // const SizedBox(width:2),
+
+                        // Text(
+                        //   "Per Person ₹${perPerson.toStringAsFixed(0)}",
+                        // ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    /// BUTTONS
+                    Row(
+                      children: [
+                        _actionBtn(Icons.group, "Members", () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => AddMemberScreen(
+                                tripId: t['id'],
+                                tripName: t['name'],
+                              ),
+                            ),
+                          );
+                        }),
+
+                        const SizedBox(width: 8),
+
+                        _actionBtn(Icons.currency_rupee, "Expense", () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => AddExpenseScreen(
+                                tripId: t['id'],
+                                tripName: t['name'],
+                              ),
+                            ),
+                          );
+                        }),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              /// THREE DOT MENU
+              Positioned(
+                top: 4,
+                right: 4,
+
+                child: PopupMenuButton<String>(
+                  onSelected: (value) async {
+                    if (value == "view") {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ReportScreen(
+                            tripId: t['id'],
+                            tripName: t['name'],
+                          ),
+                        ),
+                      );
+                    }
+
+                    if (value == "delete") {
+                      bool confirm = await showDialog(
+                        context: context,
+
+                        builder: (context) => AlertDialog(
+                          title: const Text("Delete"),
+
+                          content: const Text(
+                            "Are you sure you want to delete this expense?\nAll members and expenses will also be deleted.",
+                          ),
+
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, false),
+                              child: const Text("Cancel"),
+                            ),
+
+                            ElevatedButton(
+                              onPressed: () => Navigator.pop(context, true),
+                              child: const Text("Delete"),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.red,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+
+                      if (confirm) {
+                        await DBHelper.instance.delete(
+                          'members',
+                          'tripId = ?',
+                          [t['id']],
+                        );
+
+                        await DBHelper.instance.delete(
+                          'expenses',
+                          'tripId = ?',
+                          [t['id']],
+                        );
+
+                        await DBHelper.instance.delete(
+                          'categories',
+                          'tripId = ?',
+                          [t['id']],
+                        );
+
+                        await DBHelper.instance.delete('trips', 'id = ?', [
+                          t['id'],
+                        ]);
+
+                        _loadTrips();
+                      }
+                    }
+                    if (value == "edit") {
+                      TextEditingController nameCtrl = TextEditingController(
+                        text: t['name'],
+                      );
+
+                      TextEditingController destCtrl = TextEditingController(
+                        text: t['destination'],
+                      );
+
+                      await showDialog(
+                        context: context,
+
+                        builder: (context) {
+                          return AlertDialog(
+                            title: Text("Edit"),
+
+                            content: Column(
+                              mainAxisSize: MainAxisSize.min,
+
+                              children: [
+                                TextField(
+                                  controller: nameCtrl,
+                                  decoration: InputDecoration(
+                                    labelText: "Name",
+                                  ),
+                                ),
+
+                                SizedBox(height: 10),
+
+                                TextField(
+                                  controller: destCtrl,
+                                  decoration: InputDecoration(
+                                    labelText: "Destination",
+                                  ),
+                                ),
+                              ],
+                            ),
+
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context),
+                                child: Text("Cancel"),
+                              ),
+
+                              ElevatedButton(
+                                onPressed: () async {
+                                  await DBHelper.instance.update(
+                                    'trips',
+
+                                    {
+                                      'name': nameCtrl.text,
+                                      'destination': destCtrl.text,
+                                    },
+
+                                    'id = ?',
+                                    [t['id']],
+                                  );
+
+                                  Navigator.pop(context);
+
+                                  _loadTrips();
+                                },
+
+                                child: Text("Update"),
+                              ),
+                            ],
+                          );
+                        },
+                      );
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(
+                      value: "view",
+                      child: Row(
+                        children: [
+                          Icon(Icons.bar_chart, color: Colors.teal),
+                          SizedBox(width: 8),
+                          Text("View Report"),
+                        ],
+                      ),
+                    ),
+
+                    const PopupMenuItem(
+                      value: "edit",
+                      child: Row(
+                        children: [
+                          Icon(Icons.edit, color: Colors.blue),
+                          SizedBox(width: 8),
+                          Text("Edit"),
+                        ],
+                      ),
+                    ),
+
+                    const PopupMenuItem(
+                      value: "delete",
+                      child: Row(
+                        children: [
+                          Icon(Icons.delete, color: Colors.red),
+                          SizedBox(width: 8),
+                          Text("Delete"),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(height: 40),
+            ],
+            // );
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _actionBtn(IconData icon, String label, VoidCallback onTap) {
+    return Expanded(
+      child: OutlinedButton.icon(
+        onPressed: onTap,
+
+        icon: Icon(icon, size: 18),
+
+        label: Text(label),
+
+        style: OutlinedButton.styleFrom(
+          foregroundColor: Colors.teal,
+
+          side: const BorderSide(color: Colors.teal),
+
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+
+      appBar: AppBar(
+        title: Text("Welcome, ${widget.userName}"),
+
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(colors: [Colors.teal, Colors.tealAccent]),
+          ),
+        ),
+      ),
+      drawer: Drawer(
+        child: Column(
+          children: [
+            UserAccountsDrawerHeader(
+              accountName: Text(widget.userName),
+
+              accountEmail: Text(""),
+
+              currentAccountPicture: CircleAvatar(
+                backgroundColor: Colors.white,
+
+                child: Icon(Icons.person, size: 40, color: Colors.teal),
+              ),
+
+              decoration: BoxDecoration(color: Colors.teal),
+            ),
+
+            ListTile(
+              leading: Icon(Icons.person, color: Colors.teal),
+
+              title: Text("Profile"),
+
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ProfileScreen(
+                      userId: widget.userId,
+                      userName: widget.userName,
+                      onLogout: _logout,
+                    ),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.download, color: Colors.teal),
+              title: Text("Export Backup"),
+              onTap: () async {
+                Navigator.pop(context);
+
+                await BackupService.exportBackup();
+                AppToast.success(context, "Backup exported successfully");
+              },
+            ),
+
+            ListTile(
+              leading: Icon(Icons.upload, color: Colors.teal),
+              title: Text("Import Backup"),
+              onTap: () async {
+                Navigator.pop(context);
+
+                bool success = await BackupService.importBackup();
+                if (success) {
+                  _refreshKey.currentState?.show();
+
+                  AppToast.success(context, "Backup restored. Refreshing...");
+                }
+              },
+            ),
+            //             ListTile(
+            //               leading: Icon(Icons.cloud_upload, color: Colors.teal),
+            //               title: Text("Backup to Google Drive"),
+
+            //           onTap: () async {
+
+            //   File file = await BackupService.getBackupFile();
+
+            //   await GoogleDriveBackup.uploadBackup(file);
+
+            //   AppToast.error(context, "Backup uploaded to Google Drive");
+
+            // }
+            //             ),
+            ListTile(
+              leading: Icon(Icons.privacy_tip, color: Colors.teal),
+              title: Text("Privacy Policy"),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => PrivacyScreen()),
+                );
+              },
+            ),
+
+            ListTile(
+              leading: Icon(Icons.support_agent, color: Colors.teal),
+              title: Text("Support"),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => SupportScreen()),
+                );
+              },
+            ),
+
+            ListTile(
+              leading: Icon(Icons.info_outline, color: Colors.teal),
+              title: Text("About App"),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => AboutScreen()),
+                );
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.logout, color: Colors.red),
+
+              title: Text("Logout"),
+
+              onTap: _logout,
+            ),
+
+            const Spacer(),
+
+            const Divider(),
+
+            Padding(
+              padding: EdgeInsets.only(bottom: 20),
+
+              child: Column(
+                children: [
+                  Text(
+                    "Designed & Developed by",
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+
+                  Text(
+                    AppInfo.developerName,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.teal,
+                    ),
+                  ),
+
+                  const SizedBox(height: 6),
+
+                  InkWell(
+                    onTap: () async {
+                      final Uri emailLaunchUri = Uri(
+                        scheme: 'mailto',
+
+                        path: AppInfo.developerEmail,
+
+                        query: Uri.encodeFull(
+                          'subject=App Support / Suggestion',
+                        ),
+                      );
+
+                      await launchUrl(emailLaunchUri);
+                    },
+
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+
+                      children: [
+                        Icon(
+                          Icons.email_outlined,
+                          size: 16,
+                          color: Colors.teal,
+                        ),
+
+                        SizedBox(width: 5),
+
+                        Text(
+                          AppInfo.developerEmail,
+                          style: TextStyle(color: Colors.teal, fontSize: 13),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 30),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+      // body: RefreshIndicator(onRefresh: _loadTrips, child: _getBody()),
+      body: _selectedIndex == 0
+          ? RefreshIndicator(
+              key: _refreshKey,
+              onRefresh: _loadTrips,
+              child: _getBody(),
+            )
+          : _getBody(),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () async {
+          await Navigator.push(
+            context,
+
+            MaterialPageRoute(
+              builder: (_) => AddTripScreen(userId: widget.userId),
+            ),
+          );
+
+          _loadTrips();
+        },
+
+        backgroundColor: Colors.teal,
+        foregroundColor: Colors.white,
+        child: const Icon(Icons.add, size: 30),
+      ),
+
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+
+      bottomNavigationBar: BottomAppBar(
+        shape: const CircularNotchedRectangle(),
+
+        notchMargin: 6,
+
+        child: SizedBox(
+          height: 60,
+
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+
+            children: [
+              IconButton(
+                icon: Icon(
+                  Icons.dashboard_outlined,
+                  color: _selectedIndex == 0 ? Colors.teal : Colors.grey,
+                ),
+
+                onPressed: () => setState(() => _selectedIndex = 0),
+              ),
+
+              const SizedBox(width: 50),
+
+              IconButton(
+                icon: Icon(
+                  Icons.person_outline,
+                  color: _selectedIndex == 2 ? Colors.teal : Colors.grey,
+                ),
+
+                onPressed: () => setState(() => _selectedIndex = 2),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
