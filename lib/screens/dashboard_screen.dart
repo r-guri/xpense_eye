@@ -351,7 +351,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
         child: Center(
           child: Text(
-            "No expense added yet.\nClick + to add your first expense!",
+            "No group/trip added yet.\nClick + to add your first group/trip!",
             textAlign: TextAlign.center,
           ),
         ),

@@ -113,7 +113,7 @@ class _AddTripScreenState extends State<AddTripScreen> {
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
 
       appBar: AppBar(
-        title: Text("Create Expense"),
+        title: Text("Create Group"),
 
         flexibleSpace: Container(
           decoration: BoxDecoration(
@@ -146,7 +146,7 @@ class _AddTripScreenState extends State<AddTripScreen> {
 
                 children: [
                   Text(
-                    "Expense Details",
+                    "Group Details",
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,

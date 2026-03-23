@@ -1,145 +1,144 @@
 import 'package:flutter/material.dart';
 import '../utils/app_info.dart';
-class PrivacyScreen extends StatelessWidget {
 
+class PrivacyScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-
     return Scaffold(
-
       appBar: AppBar(
         title: Text("Privacy Policy"),
         backgroundColor: Colors.teal,
       ),
-
       body: Padding(
         padding: EdgeInsets.all(16),
-
         child: ListView(
-
           children: [
 
+            /// TITLE
             Text(
-              AppInfo.appName+" Privacy Policy",
+              "${AppInfo.appName} Privacy Policy",
               style: TextStyle(
                 fontSize: 20,
-                fontWeight: FontWeight.bold
+                fontWeight: FontWeight.bold,
               ),
             ),
 
             SizedBox(height: 10),
 
-            Text(
-              "Last Updated: 2026"
-            ),
+            Text("Last updated: March 2026"),
 
             SizedBox(height: 20),
 
             Text(
-              AppInfo.appName+" is designed to help users manage tour expenses easily. "
-              "Your privacy is important to us, and this policy explains how the app handles your data.",
+              "Thank you for using ${AppInfo.appName}. "
+              "${AppInfo.appName} helps you manage expenses across trips, friends, groups, shared living, and daily activities.",
             ),
 
             SizedBox(height: 20),
 
+            /// 1
             Text(
-              "1. Data Collection",
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 16
-              ),
+              "1. Information We Collect",
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
-
             SizedBox(height: 6),
-
             Text(
-              AppInfo.appName+" does not collect any personal data from users. "
-              "The app does not track users, does not collect analytics, and does not store information on external servers.",
+              "${AppInfo.appName} does not collect or store any personal data on external servers by default.\n\n"
+              "All information such as:\n"
+              "• Expenses\n"
+              "• Groups & Members\n"
+              "• Payments & Ledger data\n\n"
+              "is stored locally on your device only.\n\n"
+              "We do not collect:\n"
+              "• Personal identity information\n"
+              "• Location data\n"
+              "• Contacts\n"
+              "• Bank or financial account details",
             ),
 
             SizedBox(height: 20),
 
+            /// 2
             Text(
-              "2. Data Storage",
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 16
-              ),
+              "2. How Your Data is Used",
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
-
             SizedBox(height: 6),
-
             Text(
-              "All trip information, member details, deposits, and expenses are stored locally on your device using a secure local database. "
-              "This information never leaves your device unless you manually export a backup file.",
+              "Your data is used only within the app to:\n"
+              "• Track expenses\n"
+              "• Manage group balances\n"
+              "• Calculate settlements\n\n"
+              "Your data never leaves your device unless you choose to export it.",
             ),
 
             SizedBox(height: 20),
 
+            /// 3
             Text(
-              "3. Backup Feature",
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 16
-              ),
+              "3. Local Storage",
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
-
             SizedBox(height: 6),
-
             Text(
-              AppInfo.appName+" allows users to export and import backup files. "
-              "Backup files are saved on your device and are fully controlled by the user.",
+              "All data is stored securely in your device.\n\n"
+              "You have full control:\n"
+              "• Edit or delete anytime\n"
+              "• Clear app data anytime",
             ),
 
             SizedBox(height: 20),
 
+            /// 4
             Text(
-              "4. Internet Usage",
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 16
-              ),
+              "4. Backup & Sharing",
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
-
             SizedBox(height: 6),
-
             Text(
-              AppInfo.appName+" works completely offline. "
-              "The app does not require an internet connection to manage trips or expenses.",
+              "You can:\n"
+              "• Export backup manually\n"
+              "• Share your data files\n\n"
+              "No automatic data upload is performed.",
             ),
 
             SizedBox(height: 20),
 
+            /// 5
             Text(
               "5. Data Security",
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 16
-              ),
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
-
             SizedBox(height: 6),
-
             Text(
-              "Since all information is stored locally on your device, keeping your device secure is important. "
-              "We recommend protecting your device with a password or biometric lock.",
+              "We ensure:\n"
+              "• No tracking\n"
+              "• No selling of data\n"
+              "• No background data collection",
             ),
 
             SizedBox(height: 20),
 
+            /// 6
             Text(
-              "6. Changes to This Policy",
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 16
-              ),
+              "6. Children’s Privacy",
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+            SizedBox(height: 6),
+            Text(
+              "This app is not intended for children under the age of 13.",
             ),
 
-            SizedBox(height: 6),
+            SizedBox(height: 20),
 
+            /// 7
             Text(
-              "This privacy policy may be updated from time to time. "
-              "Any updates will be reflected with the 'Last Updated' date.",
+              "7. Changes to This Policy",
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+            SizedBox(height: 6),
+            Text(
+              "This policy may be updated anytime.",
             ),
 
             SizedBox(height: 25),
@@ -148,27 +147,24 @@ class PrivacyScreen extends StatelessWidget {
 
             SizedBox(height: 10),
 
+            /// CONTACT
             Text(
-              "Contact",
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 16
-              ),
+              "Contact Us",
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
-
             SizedBox(height: 6),
+            Text("Developer: ${AppInfo.developerName}"),
+            Text("Email: ${AppInfo.developerEmail}"),
 
-            Text("Developer: "+AppInfo.developerName),
+            SizedBox(height: 20),
 
-            Text("Email: "+AppInfo.developerEmail),
-
+            Text(
+              "By using ${AppInfo.appName}, you agree to this Privacy Policy.",
+              style: TextStyle(fontStyle: FontStyle.italic),
+            ),
           ],
-
         ),
       ),
-
     );
-
   }
-
 }
