@@ -60,7 +60,22 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
       adminId = admin['id'];
     });
   }
+List<String> suggestions = [
+  // Food
+  "Dinner with friends","Lunch","Breakfast","Tea stall","Snacks","Water bottles","Cold drinks",
 
+  // Travel
+  "Taxi fare","Petrol pump","Diesel","Auto ride","Bus tickets","Train tickets","Parking",
+
+  // Stay
+  "Hotel booking","Room rent","Resort stay","Guest house","Check-in payment",
+
+  // Fun
+  "Movie tickets","Party","Club entry","Games","Entry tickets",
+
+  // Misc
+  "Shopping","Medical","Grocery","Daily items","Misc expense"
+];
   Future<void> _loadCategories() async {
     await DBHelper.instance.createCategoryTable();
 
@@ -327,11 +342,36 @@ fillColor: Theme.of(context).cardColor,
 
                 SizedBox(height: 12),
 
-                TextField(
-                  controller: descCtrl,
-                  decoration: _inputStyle("Description", Icons.description),
-                ),
+                Autocomplete<String>(
+  optionsBuilder: (TextEditingValue textEditingValue) {
+    if (textEditingValue.text.isEmpty) {
+      return const Iterable<String>.empty();
+    }
 
+    return suggestions.where((s) =>
+      s.toLowerCase().contains(textEditingValue.text.toLowerCase())
+    );
+  },
+
+  onSelected: (selection) {
+    descCtrl.text = selection;
+  },
+
+  fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+
+    // IMPORTANT: sync controller
+    controller.text = descCtrl.text;
+
+    return TextField(
+      controller: controller,
+      focusNode: focusNode,
+      decoration: _inputStyle("Description", Icons.description),
+      onChanged: (value) {
+        descCtrl.text = value;
+      },
+    );
+  },
+),
                 SizedBox(height: 12),
 
                 TextField(

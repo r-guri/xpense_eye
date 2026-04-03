@@ -47,6 +47,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       'trips',
       where: 'userId = ?',
       whereArgs: [widget.userId],
+      orderBy: 'id DESC',
     );
 
     var members = await DBHelper.instance.getAll(
@@ -238,6 +239,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         'expenses',
         where: 'tripId IN (SELECT id FROM trips WHERE userId = ?)',
         whereArgs: [widget.userId],
+        orderBy: 'id DESC',
       ),
       builder: (context, AsyncSnapshot<List<Map<String, dynamic>>> snap) {
         if (!snap.hasData || snap.data!.isEmpty) return SizedBox();

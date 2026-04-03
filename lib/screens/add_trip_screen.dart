@@ -68,7 +68,7 @@ class _AddTripScreenState extends State<AddTripScreen> {
           'user_id': widget.userId,
         });
       } catch (e) {}
-      AppToast.success(context, "Trip added successfully!");
+      AppToast.success(context, " Added successfully!");
       await Future.delayed(Duration(seconds: 2));
 
       Navigator.pop(context, true);
