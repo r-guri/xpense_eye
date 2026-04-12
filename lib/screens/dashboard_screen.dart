@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+// import 'package:in_app_purchase/in_app_purchase.dart';
 import '../db_helper.dart';
 import 'add_trip_screen.dart';
 import 'add_member_screen.dart';
@@ -15,6 +16,13 @@ import 'package:url_launcher/url_launcher.dart';
 import '../utils/backup_service.dart';
 import '../utils/app_info.dart';
 import '../utils/app_toast.dart';
+import '../utils/app_config.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'services/purchase_service.dart';
+import 'services/rating_service.dart';
+// import 'ads/banner_ad_widget.dart';
+import 'ads/ad_helper.dart';
 
 // import '../utils/google_drive_backup.dart';
 class DashboardScreen extends StatefulWidget {
@@ -98,31 +106,32 @@ class _DashboardScreenState extends State<DashboardScreen> {
       totalDeposit = sumDeposit;
     });
   }
+void _logout() async {
+  SharedPreferences prefs = await SharedPreferences.getInstance();
 
-  void _logout() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
+  await prefs.clear();
 
-    await prefs.clear();
+  final GoogleSignIn googleSignIn = GoogleSignIn();
 
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(builder: (_) => LoginScreen()),
-      (route) => false,
-    );
+  try {
+    // Firebase logout
+    await FirebaseAuth.instance.signOut();
+
+    // Google logout
+    if (await googleSignIn.isSignedIn()) {
+      await googleSignIn.disconnect(); // safe now
+    }
+  } catch (e) {
+    print("Logout error: $e");
   }
 
-  // void _openProfile() {
-  //   Navigator.push(
-  //     context,
-  //     MaterialPageRoute(
-  //       builder: (_) => ProfileScreen(
-  //         userId: widget.userId,
-  //         userName: widget.userName,
-  //         onLogout: _logout,
-  //       ),
-  //     ),
-  //   );
-  // }
+  Navigator.pushAndRemoveUntil(
+    context,
+    MaterialPageRoute(builder: (_) => LoginScreen()),
+    (route) => false,
+  );
+}
+
 
   IconData _categoryIcon(String? category) {
     switch (category?.toLowerCase()) {
@@ -855,31 +864,85 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 );
               },
             ),
-            ListTile(
-              leading: Icon(Icons.download, color: Colors.teal),
-              title: Text("Export Backup"),
-              onTap: () async {
-                Navigator.pop(context);
+    ListTile(
+  leading: Icon(Icons.download, color: Colors.teal),
+  title: Text("Export Backup"),
+  onTap: () async {
+    Navigator.pop(context);
 
-                await BackupService.exportBackup();
-                AppToast.success(context, "Backup exported successfully");
-              },
-            ),
+    if (AppConfig.enableAds && PurchaseService.isAdsRemoved) {
+      /// 👑 Premium user → direct export
+      await BackupService.exportBackup(widget.userId);
 
-            ListTile(
-              leading: Icon(Icons.upload, color: Colors.teal),
-              title: Text("Import Backup"),
-              onTap: () async {
-                Navigator.pop(context);
+      AppToast.success(context, "Backup exported successfully");
 
-                bool success = await BackupService.importBackup();
-                if (success) {
-                  _refreshKey.currentState?.show();
+    } else {
+      /// 💰 Free user → ad + export
+      AdHelper.showInterstitialAd(
+        onAdClosed: () async {
+          await BackupService.exportBackup(widget.userId);
 
-                  AppToast.success(context, "Backup restored. Refreshing...");
-                }
-              },
-            ),
+          AppToast.success(context, "Backup exported successfully");
+        },
+      );
+    }
+  },
+),
+            // ListTile(
+            //   leading: Icon(Icons.download, color: Colors.teal),
+            //   title: Text("Export Backup"),
+            //   onTap: () async {
+            //     Navigator.pop(context);
+
+            //     await BackupService.exportBackup(widget.userId);
+            //     AppToast.success(context, "Backup exported successfully");
+            //   },
+            // ),
+ListTile(
+  leading: Icon(Icons.upload, color: Colors.teal),
+  title: Text("Import Backup"),
+  onTap: () async {
+    Navigator.pop(context);
+
+    if (AppConfig.enableAds && PurchaseService.isAdsRemoved) {
+      bool success =
+          await BackupService.importBackup(widget.userId);
+
+      if (success) {
+        _refreshKey.currentState?.show();
+        AppToast.success(context, "Backup restored. Refreshing...");
+      }
+
+    } else {
+      AdHelper.showInterstitialAd(
+        onAdClosed: () async {
+          bool success =
+              await BackupService.importBackup(widget.userId);
+
+          if (success) {
+            _refreshKey.currentState?.show();
+            AppToast.success(context, "Backup restored. Refreshing...");
+            RatingService.trigger(context);
+          }
+        },
+      );
+    }
+  },
+),
+            // ListTile(
+            //   leading: Icon(Icons.upload, color: Colors.teal),
+            //   title: Text("Import Backup"),
+            //   onTap: () async {
+            //     Navigator.pop(context);
+
+            //     bool success = await BackupService.importBackup(widget.userId);
+            //     if (success) {
+            //       _refreshKey.currentState?.show();
+
+            //       AppToast.success(context, "Backup restored. Refreshing...");
+            //     }
+            //   },
+            // ),
             //             ListTile(
             //               leading: Icon(Icons.cloud_upload, color: Colors.teal),
             //               title: Text("Backup to Google Drive"),
@@ -926,6 +989,52 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 );
               },
             ),
+
+            ListTile(
+  leading: Icon(Icons.star, color: Colors.orange),
+  title: Text("Remove Ads ₹99"),
+  onTap: () {
+    Navigator.pop(context);
+
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text("Go Premium 👑"),
+        content: Text(
+            "Remove all ads & enjoy smooth experience.\n\nOne-time payment Price: ₹99 (may vary slightly due to taxes)"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text("Cancel"),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context);
+
+              /// 🔥 MAIN FIX
+              await PurchaseService.buyRemoveAds();
+            },
+            child: Text("Buy ₹99"),
+          ),
+        ],
+      ),
+    );
+  },
+),
+/// 🔁 Restore Purchase
+ListTile(
+  leading: Icon(Icons.restore, color: Colors.teal),
+  title: Text("Restore Purchase"),
+  onTap: () async {
+    Navigator.pop(context);
+
+    await PurchaseService.restore();
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Restoring purchase...")),
+    );
+  },
+),
             ListTile(
               leading: Icon(Icons.logout, color: Colors.red),
 

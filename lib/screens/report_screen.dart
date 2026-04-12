@@ -2,10 +2,14 @@ import 'package:flutter/material.dart';
 import '../db_helper.dart';
 import '../utils/pdf_generator.dart';
 import '../utils/app_toast.dart';
+import '../utils/app_config.dart';
 import 'package:intl/intl.dart';
 import 'settlement_screen.dart';
 import 'member_ledger_screen.dart';
-
+import 'ads/banner_ad_widget.dart';
+import 'ads/ad_helper.dart';
+import 'services/purchase_service.dart';
+import 'services/rating_service.dart';
 class ReportScreen extends StatefulWidget {
   final int tripId;
   final String tripName;
@@ -595,37 +599,79 @@ class _ReportScreenState extends State<ReportScreen> {
   }
 
   /// PDF
+Future<void> _downloadPDF() async {
 
-  Future<void> _downloadPDF() async {
-    List<Map<String, dynamic>> selectedList;
+  if (AppConfig.enableAds && PurchaseService.isAdsRemoved) {
+    /// 👑 Premium user → direct PDF
+    await _generatePDF();
 
-    if (selectAll) {
-      selectedList = members;
-    } else {
-      selectedList = members
-          .where((m) => selectedMembers.contains(m['id']))
-          .toList();
-    }
-
-    if (selectedList.isEmpty) {
-      AppToast.error(context, "Select members first!");
-      return;
-    }
-
-    await generateTripReportPDF(
-      tripName: widget.tripName,
-
-      members: selectedList,
-
-      expenses: expenses,
-
-      totalExpense: totalTripExpense,
-
-      allMembers: members,
+  } else {
+    /// 💰 Free user → ad + PDF
+    AdHelper.showInterstitialAd(
+      onAdClosed: () async {
+        await _generatePDF();
+      },
     );
-
-    AppToast.success(context, "PDF downloaded successfully!");
   }
+}
+Future<void> _generatePDF() async {
+  List<Map<String, dynamic>> selectedList;
+
+  if (selectAll) {
+    selectedList = members;
+  } else {
+    selectedList = members
+        .where((m) => selectedMembers.contains(m['id']))
+        .toList();
+  }
+
+  if (selectedList.isEmpty) {
+    AppToast.error(context, "Select members first!");
+    return;
+  }
+
+  await generateTripReportPDF(
+    tripName: widget.tripName,
+    members: selectedList,
+    expenses: expenses,
+    totalExpense: totalTripExpense,
+    allMembers: members,
+  );
+
+  AppToast.success(context, "PDF downloaded successfully!");
+  RatingService.trigger(context);
+}
+  // Future<void> _downloadPDF() async {
+  // AdHelper.showInterstitialAd();// 🔥 add this
+  //   List<Map<String, dynamic>> selectedList;
+
+  //   if (selectAll) {
+  //     selectedList = members;
+  //   } else {
+  //     selectedList = members
+  //         .where((m) => selectedMembers.contains(m['id']))
+  //         .toList();
+  //   }
+
+  //   if (selectedList.isEmpty) {
+  //     AppToast.error(context, "Select members first!");
+  //     return;
+  //   }
+
+  //   await generateTripReportPDF(
+  //     tripName: widget.tripName,
+
+  //     members: selectedList,
+
+  //     expenses: expenses,
+
+  //     totalExpense: totalTripExpense,
+
+  //     allMembers: members,
+  //   );
+
+  //   AppToast.success(context, "PDF downloaded successfully!");
+  // }
 
   /// MEMBER TABLE
 
@@ -935,7 +981,12 @@ class _ReportScreenState extends State<ReportScreen> {
                 ),
               );
             }),
-            SizedBox(height: 60),
+            SizedBox(height: 20),
+
+/// 🔥 Banner Ad
+ if (AppConfig.enableAds && !PurchaseService.isAdsRemoved)
+  const BannerAdWidget(),
+  SizedBox(height: 20),
           ],
         ),
       ),

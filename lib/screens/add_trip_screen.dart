@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import '../db_helper.dart';
 import '../utils/app_toast.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-
+import 'ads/banner_ad_widget.dart';
+import '../utils/app_config.dart';
+import 'services/purchase_service.dart';
 class AddTripScreen extends StatefulWidget {
   final int userId;
   AddTripScreen({required this.userId});
@@ -56,18 +57,6 @@ class _AddTripScreenState extends State<AddTripScreen> {
         'startDate': startDate!.toIso8601String(),
         'endDate': endDate!.toIso8601String(),
       });
-
-      /// 2️⃣ Supabase insert (backup only)
-      try {
-        final supabase = Supabase.instance.client;
-        await supabase.from('trips').insert({
-          'name': nameCtrl.text,
-          'destination': destCtrl.text,
-          'start_date': startDate!.toIso8601String(),
-          'end_date': endDate!.toIso8601String(),
-          'user_id': widget.userId,
-        });
-      } catch (e) {}
       AppToast.success(context, " Added successfully!");
       await Future.delayed(Duration(seconds: 2));
 
@@ -113,7 +102,7 @@ class _AddTripScreenState extends State<AddTripScreen> {
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
 
       appBar: AppBar(
-        title: Text("Create Group"),
+        title: Text("Create Trip/Group"),
 
         flexibleSpace: Container(
           decoration: BoxDecoration(
@@ -146,7 +135,7 @@ class _AddTripScreenState extends State<AddTripScreen> {
 
                 children: [
                   Text(
-                    "Group Details",
+                    "New Trip/Group",
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
@@ -270,6 +259,9 @@ class _AddTripScreenState extends State<AddTripScreen> {
                 ],
               ),
             ),
+            SizedBox(height: 20),
+        if (AppConfig.enableAds && !PurchaseService.isAdsRemoved)
+  const BannerAdWidget(),
           ],
         ),
       ),

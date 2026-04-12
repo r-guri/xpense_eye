@@ -24,7 +24,7 @@ class _SplashScreenState extends State<SplashScreen>
   void initState() {
 
     super.initState();
-
+      checkLogin(context);
     _fadeController = AnimationController(
       vsync: this,
       duration: Duration(milliseconds: 900),
@@ -50,44 +50,38 @@ class _SplashScreenState extends State<SplashScreen>
     _fadeController.forward();
     _scaleController.forward();
 
-    _checkLogin();
+    // checkLogin();
 
   }
 
-  Future<void> _checkLogin() async {
+ Future<void> checkLogin(BuildContext context) async {
 
-    await Future.delayed(Duration(seconds: 2));
+  final prefs = await SharedPreferences.getInstance();
 
-    SharedPreferences prefs = await SharedPreferences.getInstance();
+  int? userId = prefs.getInt('userId');
+  String? userName = prefs.getString('userName');
 
-    int? userId = prefs.getInt('userId');
-    String? userName = prefs.getString('userName');
+  await Future.delayed(Duration(seconds: 1)); // optional splash
 
-    if(userId != null){
-
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => DashboardScreen(
-            userId: userId,
-            userName: userName ?? "User",
-          ),
+  if (userId != null) {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => DashboardScreen(
+          userId: userId,
+          userName: userName ?? '',
         ),
-      );
-
-    }
-    else{
-
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => LoginScreen(),
-        ),
-      );
-
-    }
-
+      ),
+    );
+  } else {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => LoginScreen(),
+      ),
+    );
   }
+}
 
   @override
   void dispose() {

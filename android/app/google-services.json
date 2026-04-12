@@ -1,0 +1,63 @@
+{
+  "project_info": {
+    "project_number": "209128525008",
+    "project_id": "xpense-eye-60097",
+    "storage_bucket": "xpense-eye-60097.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:209128525008:android:1fed1cef750b29579862d5",
+        "android_client_info": {
+          "package_name": "com.epense.eye"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "209128525008-4stk4eo8g3f3s34qrfieucoaungmlt0m.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.epense.eye",
+            "certificate_hash": "3aac66544112f4e34995f674b37279f468942d3b"
+          }
+        },
+        {
+          "client_id": "209128525008-69n845b572g4i7n0pat1soshh2hrlagg.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.epense.eye",
+            "certificate_hash": "76f10651d37efed218fbab0037683482ce98b34a"
+          }
+        },
+        {
+          "client_id": "209128525008-bido0sst02nukqadlpg2568haqen993e.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.epense.eye",
+            "certificate_hash": "f622a36efc9d88b50c8bc6c900884861223966bb"
+          }
+        },
+        {
+          "client_id": "209128525008-gcs3rst7tos4beejneijr28fst02g220.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBCyap7Ec7Zqljx0e_Yx51ykmVeSbZnwh4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "209128525008-gcs3rst7tos4beejneijr28fst02g220.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

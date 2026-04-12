@@ -8,100 +8,58 @@ import '../db_helper.dart';
 class BackupService {
 
   /// EXPORT BACKUP
-  static Future<void> exportBackup() async {
+static Future<void> exportBackup(int userId) async {
 
-    final db = DBHelper.instance;
+  final db = DBHelper.instance;
 
-    Map<String,dynamic> backup = {
+  final trips = await db.getAll(
+    "trips",
+    where: "userId = ?",
+    whereArgs: [userId],
+  );
 
-      "trips": await db.getAll("trips"),
-      "members": await db.getAll("members"),
-      "expenses": await db.getAll("expenses"),
-      "member_transactions": await db.getAll("member_transactions"),
-      "categories": await db.getAll("categories"),
+  List data = [];
 
-    };
+  for (var trip in trips) {
 
-    final dir = await getApplicationDocumentsDirectory();
+    int tripId = trip['id'];
 
-    File file = File("${dir.path}/xpense_eye_backup.json");
+    var members = await db.getAll(
+      "members",
+      where: "tripId = ?",
+      whereArgs: [tripId],
+    );
 
-    await file.writeAsString(jsonEncode(backup));
+    var expenses = await db.getAll(
+      "expenses",
+      where: "tripId = ?",
+      whereArgs: [tripId],
+    );
 
-    await Share.shareXFiles([XFile(file.path)],
-        text: "Xpense Eye Backup");
+    var ledger = await db.getAll(
+      "member_transactions",
+      where: "tripId = ?",
+      whereArgs: [tripId],
+    );
 
+    data.add({
+      "trip": trip,
+      "members": members,
+      "expenses": expenses,
+      "ledger": ledger,
+    });
   }
-// static Future<bool> importBackup(int currentUserId) async {
-//   FilePickerResult? result = await FilePicker.platform.pickFiles(
-//     type: FileType.custom,
-//     allowedExtensions: ["json"],
-//   );
 
-//   if (result == null) return false;
+  final dir = await getApplicationDocumentsDirectory();
+  File file = File("${dir.path}/xpense_backup.json");
 
-//   File file = File(result.files.single.path!);
+  await file.writeAsString(jsonEncode(data));
 
-//   String data = await file.readAsString();
-
-//   Map<String, dynamic> backup = jsonDecode(data);
-
-//   final db = await DBHelper.instance.database;
-
-//   // CLEAR OLD DATA
-//   await db.delete("trips");
-//   await db.delete("members");
-//   await db.delete("expenses");
-//   await db.delete("member_transactions");
-//   await db.delete("categories");
-
-//   Map<int,int> tripIdMap = {}; // oldTripId -> newTripId mapping
-
-//   // RESTORE TRIPS
-//   for (var t in backup["trips"]) {
-//     var trip = Map<String,dynamic>.from(t);
-//     trip['userId'] = currentUserId; // replace with current userId
-//     trip.remove('id'); // remove old ID to generate new one
-//     int newTripId = await db.insert("trips", trip);
-//     tripIdMap[t['id']] = newTripId;
-//   }
-
-//   // RESTORE MEMBERS
-//   for (var m in backup["members"]) {
-//     var member = Map<String,dynamic>.from(m);
-//     member['tripId'] = tripIdMap[m['tripId']]!;
-//     member.remove('id');
-//     await db.insert("members", member);
-//   }
-
-//   // RESTORE EXPENSES
-//   for (var e in backup["expenses"]) {
-//     var expense = Map<String,dynamic>.from(e);
-//     expense['tripId'] = tripIdMap[e['tripId']]!;
-//     expense.remove('id');
-//     await db.insert("expenses", expense);
-//   }
-
-//   // RESTORE TRANSACTIONS
-//   for (var l in backup["member_transactions"]) {
-//     var transaction = Map<String,dynamic>.from(l);
-//     transaction['tripId'] = tripIdMap[l['tripId']]!;
-//     transaction.remove('id');
-//     await db.insert("member_transactions", transaction);
-//   }
-
-//   // RESTORE CATEGORIES
-//   for (var c in backup["categories"]) {
-//     var category = Map<String,dynamic>.from(c);
-//     category['tripId'] = tripIdMap[c['tripId']]!;
-//     category.remove('id');
-//     await db.insert("categories", category);
-//   }
-
-//   return true;
-// }
+  await Share.shareXFiles([XFile(file.path),], text: "Backup File");
+}
   /// IMPORT BACKUP
-static Future<bool> importBackup() async {
+static Future<bool> importBackup(int currentUserId) async {
+
   FilePickerResult? result = await FilePicker.platform.pickFiles(
     type: FileType.custom,
     allowedExtensions: ["json"],
@@ -112,86 +70,80 @@ static Future<bool> importBackup() async {
   File file = File(result.files.single.path!);
 
   String data = await file.readAsString();
+  List backup = jsonDecode(data);
 
-  Map<String, dynamic> backup = jsonDecode(data);
+  final db = DBHelper.instance;
 
-  final db = await DBHelper.instance.database;
+  for (var item in backup) {
 
-  await db.delete("trips");
-  await db.delete("members");
-  await db.delete("expenses");
-  await db.delete("member_transactions");
-  await db.delete("categories");
+    /// 🟢 INSERT TRIP
+    var trip = item["trip"];
 
-  for (var t in backup["trips"]) {
-    await db.insert("trips", Map<String, dynamic>.from(t));
+    int newTripId = await db.insert("trips", {
+      "userId": currentUserId,
+      "name": trip["name"],
+      "destination": trip["destination"],
+      "startDate": trip["startDate"],
+      "endDate": trip["endDate"],
+    });
+
+    /// 🟢 MEMBER MAP
+    Map<int, int> memberMap = {};
+
+    for (var m in item["members"]) {
+
+      int oldId = m["id"];
+
+      int newId = await db.insert("members", {
+        "tripId": newTripId,
+        "name": m["name"],
+        "mobile": m["mobile"],
+        "email": m["email"],
+        "payAmount": m["payAmount"],
+        "isAdmin": m["isAdmin"],
+      });
+
+      memberMap[oldId] = newId;
+    }
+
+    /// 🟢 EXPENSES
+    for (var e in item["expenses"]) {
+
+      List<int> oldIds = e["members"]
+          .toString()
+          .split(",")
+          .map((x) => int.parse(x))
+          .toList();
+
+      List<int> newIds =
+          oldIds.map((id) => memberMap[id]!).toList();
+
+      await db.insert("expenses", {
+        "tripId": newTripId,
+        "description": e["description"],
+        "amount": e["amount"],
+        "category": e["category"],
+        "startLocation": e["startLocation"],
+        "endLocation": e["endLocation"],
+        "travelDate": e["travelDate"],
+        "members": newIds.join(","),
+      });
+    }
+
+    /// 🟢 LEDGER
+    for (var l in item["ledger"]) {
+
+      await db.insert("member_transactions", {
+        "tripId": newTripId,
+        "memberId": memberMap[l["memberId"]],
+        "amount": l["amount"],
+        "type": l["type"],
+        "note": l["note"],
+      });
+    }
   }
 
-  for (var m in backup["members"]) {
-    await db.insert("members", Map<String, dynamic>.from(m));
-  }
-
-  for (var e in backup["expenses"]) {
-    await db.insert("expenses", Map<String, dynamic>.from(e));
-  }
-
-  for (var l in backup["member_transactions"]) {
-    await db.insert("member_transactions", Map<String, dynamic>.from(l));
-  }
-
-  for (var c in backup["categories"]) {
-    await db.insert("categories", Map<String, dynamic>.from(c));
-  }
-
-  return true; // 👈 IMPORTANT
+  return true;
 }
-  // static Future<void> importBackup() async {
-
-  //   FilePickerResult? result = await FilePicker.platform.pickFiles(
-  //     type: FileType.custom,
-  //     allowedExtensions: ["json"],
-  //   );
-
-  //   if(result == null) return;
-
-  //   File file = File(result.files.single.path!);
-
-  //   String data = await file.readAsString();
-
-  //   Map<String,dynamic> backup = jsonDecode(data);
-
-  //   final db = await DBHelper.instance.database;
-
-  //   /// CLEAR OLD DATA
-
-  //   await db.delete("trips");
-  //   await db.delete("members");
-  //   await db.delete("expenses");
-  //   await db.delete("member_transactions");
-  //   await db.delete("categories");
-
-  //   /// RESTORE DATA
-
-  //   for(var t in backup["trips"]) {
-  //     await db.insert("trips", Map<String,dynamic>.from(t));
-  //   }
-
-  //   for(var m in backup["members"]) {
-  //     await db.insert("members", Map<String,dynamic>.from(m));
-  //   }
-
-  //   for(var e in backup["expenses"]) {
-  //     await db.insert("expenses", Map<String,dynamic>.from(e));
-  //   }
-
-  //   for(var l in backup["member_transactions"]) {
-  //     await db.insert("member_transactions", Map<String,dynamic>.from(l));
-  //   }
-
-  //   for(var c in backup["categories"]) {
-  //     await db.insert("categories", Map<String,dynamic>.from(c));
-  //   }
-
-  // }
-
+ 
 }

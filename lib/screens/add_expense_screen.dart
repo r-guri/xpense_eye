@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import '../db_helper.dart';
 import '../utils/app_toast.dart';
 import 'add_member_screen.dart';
+import 'ads/banner_ad_widget.dart';
+import '../utils/app_config.dart';
+import 'services/purchase_service.dart';
+import 'services/rating_service.dart';
 class AddExpenseScreen extends StatefulWidget {
   final int tripId;
   final String tripName;
@@ -96,7 +100,7 @@ List<String> suggestions = [
   }
 
   Future<void> _addExpense() async {
-
+FocusScope.of(context).requestFocus(FocusNode());
 var members = await DBHelper.instance.getAll(
   'members',
   where: 'tripId = ?',
@@ -182,8 +186,13 @@ if (!hasAdmin) {
     selectedMembers.clear();
     travelDate = null;
 
-    AppToast.success(context, "Expense added successfully!");
+   AppToast.success(context, "Expense added successfully!");
 
+Future.delayed(const Duration(seconds: 2), () {
+  if (context.mounted) {
+    RatingService.trigger(context);
+  }
+});
     setState(() {});
   }
 
@@ -535,6 +544,10 @@ fillColor: Theme.of(context).cardColor,
               ),
             ),
           ),
+           SizedBox(height: 40),
+           /// 🔥 Banner Ad
+          if (AppConfig.enableAds && !PurchaseService.isAdsRemoved)
+  const BannerAdWidget(),
            SizedBox(height: 40),
         ],
       ),

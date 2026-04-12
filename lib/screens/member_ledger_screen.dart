@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../db_helper.dart';
 import 'package:intl/intl.dart';
-
+import 'ads/banner_ad_widget.dart';
+import 'services/purchase_service.dart';
+import '../utils/app_config.dart';
 class MemberLedgerScreen extends StatefulWidget {
   final int memberId;
   final String memberName;
@@ -289,7 +291,10 @@ class _MemberLedgerScreenState extends State<MemberLedgerScreen> {
               );
             }),
 
-            SizedBox(height: 20),
+            // SizedBox(height: 20),
+               SizedBox(height: 20),
+          if (AppConfig.enableAds && !PurchaseService.isAdsRemoved)
+  const BannerAdWidget(),
           ],
         ),
       ),

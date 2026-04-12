@@ -55,10 +55,10 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
       return;
     }
 
-    if (mobileCtrl.text.trim().isEmpty) {
-      AppToast.error(context, "Mobile No is required!");
-      return;
-    }
+    // if (mobileCtrl.text.trim().isEmpty) {
+    //   AppToast.error(context, "Mobile No is required!");
+    //   return;
+    // }
 
     if (payCtrl.text.trim().isEmpty) {
       AppToast.error(context, "Pay Amount is required!");
@@ -71,7 +71,7 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
       AppToast.error(context, "Enter valid Pay Amount!");
       return;
     }
-
+FocusScope.of(context).requestFocus(FocusNode());
     int adminValue = 0;
 
     if (isAdmin && !adminExists) {
@@ -214,7 +214,7 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
                   TextField(
                     controller: mobileCtrl,
                     keyboardType: TextInputType.phone,
-                    decoration: _inputStyle("Mobile *", Icons.phone),
+                    decoration: _inputStyle("Mobile ", Icons.phone),
                   ),
 
                   SizedBox(height: 12),

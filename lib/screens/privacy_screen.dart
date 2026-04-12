@@ -13,14 +13,10 @@ class PrivacyScreen extends StatelessWidget {
         padding: EdgeInsets.all(16),
         child: ListView(
           children: [
-
             /// TITLE
             Text(
               "${AppInfo.appName} Privacy Policy",
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
 
             SizedBox(height: 10),
@@ -125,9 +121,7 @@ class PrivacyScreen extends StatelessWidget {
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
             SizedBox(height: 6),
-            Text(
-              "This app is not intended for children under the age of 13.",
-            ),
+            Text("This app is not intended for children under the age of 13."),
 
             SizedBox(height: 20),
 
@@ -137,12 +131,23 @@ class PrivacyScreen extends StatelessWidget {
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
             SizedBox(height: 6),
-            Text(
-              "This policy may be updated anytime.",
-            ),
+            Text("This policy may be updated anytime."),
 
             SizedBox(height: 25),
-
+            Text(
+              "8. Google Sign-In",
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+            SizedBox(height: 6),
+            Text(
+              "${AppInfo.appName} allows users to sign in using their Google account.\n\n"
+              "When you sign in with Google, the app may access basic profile information such as:\n"
+              "• Name\n"
+              "• Email address\n"
+              "• Profile picture\n\n"
+              "This information is used only for authentication purposes to securely log you into the app.\n\n"
+              "We do not store this information on our servers, nor do we share it with any third parties.",
+            ),
             Divider(),
 
             SizedBox(height: 10),

@@ -3,8 +3,7 @@ import 'login_screen.dart';
 import '../db_helper.dart';
 import 'utils.dart'; // For hashPassword function
 import '../utils/app_toast.dart';
-import '../utils/app_info.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+// import '../utils/app_info.dart';
 class SignupScreen extends StatefulWidget {
   @override
   _SignupScreenState createState() => _SignupScreenState();
@@ -31,24 +30,6 @@ Future<void> _signup() async {
       'email': _emailController.text.trim(),
       'password': hashPassword(_passwordController.text),
     });
-
-    /// 2️⃣ Supabase insert (backup only)
-    try {
-
-      final supabase = Supabase.instance.client;
-
-      await supabase.from('users').insert({
-        'name': _nameController.text.trim(),
-        'email': _emailController.text.trim(),
-        'password': hashPassword(_passwordController.text),
-      });
-
-    } catch (e) {
-
-      /// Supabase fail hoya ta ignore
-      // print("Supabase signup sync failed: $e");
-
-    }
 
     AppToast.success(context, "Signup successful! Please login.");
 
@@ -86,13 +67,13 @@ Future<void> _signup() async {
               children: [
                 Image.asset('assets/logo.png', height: 100),
 
-                SizedBox(height: 16),
+                // SizedBox(height: 16),
                 Text(
                   "Create Account",
                   style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
-                    color: Colors.teal.shade800,
+                    color: Colors.teal,
                   ),
                 ),
                 SizedBox(height: 32),
@@ -192,48 +173,74 @@ Future<void> _signup() async {
                   ),
                 ),
 
-                SizedBox(height: 16),
+                SizedBox(height: 20),
 
                 // Already have account
-                TextButton(
+                  SizedBox(
+                width: double.infinity,
+                child: OutlinedButton(
                   onPressed: () {
                     Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(builder: (_) => LoginScreen()),
                     );
                   },
-                  child: Text(
-                    "Already have an account? Login",
-                    style: TextStyle(color: Colors.teal.shade700),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    side: const BorderSide(color: Color(0xFF009688)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
-                ),
-
-                SizedBox(height: 40),
-
-                // Footer Section
-                Divider(thickness: 1),
-                SizedBox(height: 10),
-                Text(
-                  "Designed & Developed by "+AppInfo.developerName,
-                  style: TextStyle(color: Colors.grey[700], fontSize: 14),
-                ),
-                SizedBox(height: 6),
-                GestureDetector(
-                  onTap: () {
-                    // Open email support (optional)
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Contact: '+AppInfo.developerEmail)),
-                    );
-                  },
-                  child: Text(
-                    AppInfo.developerEmail,
+                  child: const Text(
+                    "Already have an account? Login",
                     style: TextStyle(
-                      color: Colors.teal,
-                      fontSize: 14,
-                      decoration: TextDecoration.underline,
+                      color: Color(0xFF009688),
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
                 ),
+              ),
+                // TextButton(
+                //   onPressed: () {
+                //     Navigator.pushReplacement(
+                //       context,
+                //       MaterialPageRoute(builder: (_) => LoginScreen()),
+                //     );
+                //   },
+                //   child: Text(
+                //     "Already have an account? Login",
+                //     style: TextStyle(color: Colors.teal.shade700),
+                //   ),
+                // ),
+
+                SizedBox(height: 80),
+
+                // // Footer Section
+                // Divider(thickness: 1),
+                // SizedBox(height: 10),
+                // Text(
+                //   "Designed & Developed by "+AppInfo.developerName,
+                //   style: TextStyle(color: Colors.grey[700], fontSize: 14),
+                // ),
+                // SizedBox(height: 6),
+                // GestureDetector(
+                //   onTap: () {
+                //     // Open email support (optional)
+                //     ScaffoldMessenger.of(context).showSnackBar(
+                //       SnackBar(content: Text('Contact: '+AppInfo.developerEmail)),
+                //     );
+                //   },
+                //   child: Text(
+                //     AppInfo.developerEmail,
+                //     style: TextStyle(
+                //       color: Colors.teal,
+                //       fontSize: 14,
+                //       decoration: TextDecoration.underline,
+                //     ),
+                //   ),
+                // ),
               ],
             ),
           ),
