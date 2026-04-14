@@ -1,3 +1,3 @@
 class AppConfig {
-  static bool enableAds = true; // 👈 abhi OFF
+  static bool enableAds = false; // 👈 abhi OFF
 }

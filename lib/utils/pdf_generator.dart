@@ -16,6 +16,26 @@ Future<void> generateTripReportPDF({
   required List<Map<String, dynamic>> allMembers,
 }) async {
   final pdf = pw.Document();
+members.sort((a, b) => a['id'].compareTo(b['id']));
+expenses.sort((a, b) => a['id'].compareTo(b['id']));
+final font = pw.Font.ttf(
+  await rootBundle.load("assets/fonts/NotoSans-Regular.ttf"),
+);
+
+final hindiFont = pw.Font.ttf(
+  await rootBundle.load("assets/fonts/NotoSansDevanagari-Regular.ttf"),
+);
+
+final punjabiFont = pw.Font.ttf(
+  await rootBundle.load("assets/fonts/NotoSansGurmukhi-VariableFont_wght.ttf"),
+);
+final baseStyle = pw.TextStyle(
+  font: font, // 🔥 MUST ADD THIS
+  fontFallback: [
+    hindiFont,
+    punjabiFont,
+  ],
+);
 
   Map<int, double> memberShares = {};
   Map<int, double> memberDeposits = {};
@@ -223,10 +243,16 @@ Future<void> generateTripReportPDF({
             color: PdfColor.fromHex("#00796B"),
           ),
 
-          headerStyle: pw.TextStyle(
+          headerStyle: baseStyle.copyWith(
             color: PdfColors.white,
+             // 🔥 ADD THIS
+             
             fontWeight: pw.FontWeight.bold,
           ),
+ cellStyle: baseStyle.copyWith(
+     // 🔥 MOST IMPORTANT
+     
+  ),
 
           headers: ["Member", "Deposit", "Spent", "Share", "Balance"],
           data: members.map((m) {
@@ -281,11 +307,17 @@ Future<void> generateTripReportPDF({
             color: PdfColor.fromHex("#00796B"),
           ),
 
-          headerStyle: pw.TextStyle(
-            color: PdfColors.white,
-            fontWeight: pw.FontWeight.bold,
-          ),
+      headerStyle: baseStyle.copyWith(
+  
+ 
+  color: PdfColors.white,
+  fontWeight: pw.FontWeight.bold,
+),
 
+cellStyle: baseStyle.copyWith(
+  
+ 
+),
           headers: ["Date", "Category", "Description", "Amount", "Members"],
 
           data: filteredExpenses.map((e) {

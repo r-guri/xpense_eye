@@ -9,7 +9,9 @@ import 'member_ledger_screen.dart';
 import 'ads/banner_ad_widget.dart';
 import 'ads/ad_helper.dart';
 import 'services/purchase_service.dart';
-import 'services/rating_service.dart';
+// import 'services/rating_service.dart';
+import '../utils/app_strings.dart';
+
 class ReportScreen extends StatefulWidget {
   final int tripId;
   final String tripName;
@@ -38,7 +40,7 @@ class _ReportScreenState extends State<ReportScreen> {
   bool selectAll = true;
 
   double totalTripExpense = 0;
-
+  bool isLoading = true;
   @override
   void initState() {
     super.initState();
@@ -47,12 +49,13 @@ class _ReportScreenState extends State<ReportScreen> {
 
   /// LOAD DATA
   Future<void> _loadReport() async {
+    setState(() => isLoading = true); // 🔥 START LOADER
     final results = await Future.wait([
       DBHelper.instance.getAll(
         'expenses',
         where: 'tripId = ?',
         whereArgs: [widget.tripId],
-        orderBy: 'COALESCE(travelDate, createdAt) DESC',
+        orderBy: 'id DESC',
       ),
 
       DBHelper.instance.getAll(
@@ -112,8 +115,7 @@ class _ReportScreenState extends State<ReportScreen> {
     if (selectAll) {
       selectedMembers = members.map((m) => m['id'] as int).toList();
     }
-
-    setState(() {});
+    setState(() => isLoading = false); // 🔥 END LOADER
   }
   // Future<void> _loadReport() async {
 
@@ -234,7 +236,7 @@ class _ReportScreenState extends State<ReportScreen> {
     if (confirm == true) {
       await DBHelper.instance.delete('expenses', 'id = ?', [id]);
 
-      AppToast.success(context, "Expense deleted");
+      AppToast.success(context, AppStrings.get("expense_deleted"));
 
       _loadReport();
     }
@@ -302,9 +304,9 @@ class _ReportScreenState extends State<ReportScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
 
                   children: [
-                    const Center(
+                    Center(
                       child: Text(
-                        "Edit Expense",
+                        AppStrings.get("edit_expense"),
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -337,8 +339,8 @@ class _ReportScreenState extends State<ReportScreen> {
                     /// DESCRIPTION
                     TextField(
                       controller: descCtrl,
-                      decoration: const InputDecoration(
-                        labelText: "Description",
+                      decoration: InputDecoration(
+                        labelText: AppStrings.get("description"),
                         border: OutlineInputBorder(),
                       ),
                     ),
@@ -349,8 +351,8 @@ class _ReportScreenState extends State<ReportScreen> {
                     TextField(
                       controller: amountCtrl,
                       keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: "Amount",
+                      decoration: InputDecoration(
+                        labelText: AppStrings.get("amount"),
                         border: OutlineInputBorder(),
                       ),
                     ),
@@ -475,13 +477,16 @@ class _ReportScreenState extends State<ReportScreen> {
 
                           Navigator.pop(context);
 
-                          AppToast.success(context, "Expense updated");
+                          AppToast.success(
+                            context,
+                            AppStrings.get("expense_updated"),
+                          );
 
                           _loadReport();
                         },
 
-                        child: const Text(
-                          "Update Expense",
+                        child: Text(
+                          AppStrings.get("update_expense"),
                           style: TextStyle(color: Colors.white),
                         ),
                       ),
@@ -516,8 +521,8 @@ class _ReportScreenState extends State<ReportScreen> {
                 mainAxisSize: MainAxisSize.min,
 
                 children: [
-                  const Text(
-                    "Select Members",
+                  Text(
+                    AppStrings.get("select_members"),
                     style: TextStyle(
                       fontSize: 18,
                       color: Colors.teal,
@@ -530,7 +535,7 @@ class _ReportScreenState extends State<ReportScreen> {
                   CheckboxListTile(
                     value: selectAll,
 
-                    title: const Text("All Members"),
+                    title: Text(AppStrings.get("all_members")),
 
                     onChanged: (val) {
                       setModalState(() {
@@ -581,14 +586,14 @@ class _ReportScreenState extends State<ReportScreen> {
                     onPressed: () {
                       Navigator.pop(context);
                     },
-                    child: const Text("OK"),
+                    child: Text(AppStrings.get("ok")),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.teal,
                       foregroundColor: Colors.white,
                       padding: EdgeInsets.symmetric(vertical: 16),
                     ),
                   ),
-                  SizedBox(height: 50),
+                  SizedBox(height: 30),
                 ],
               ),
             );
@@ -599,48 +604,46 @@ class _ReportScreenState extends State<ReportScreen> {
   }
 
   /// PDF
-Future<void> _downloadPDF() async {
+  Future<void> _downloadPDF() async {
+    if (AppConfig.enableAds && !PurchaseService.isAdsRemoved) {
+      AdHelper.showInterstitialAd(
+        onAdClosed: () async {
+          await _generatePDF();
+        },
+      );
+    } else {
+      await _generatePDF();
+    }
+  }
 
-  if (AppConfig.enableAds && PurchaseService.isAdsRemoved) {
-    /// 👑 Premium user → direct PDF
-    await _generatePDF();
+  Future<void> _generatePDF() async {
+    setState(() => isLoading = true); // 🔥 START LOADER
+    List<Map<String, dynamic>> selectedList;
 
-  } else {
-    /// 💰 Free user → ad + PDF
-    AdHelper.showInterstitialAd(
-      onAdClosed: () async {
-        await _generatePDF();
-      },
+    if (selectAll) {
+      selectedList = members;
+    } else {
+      selectedList = members
+          .where((m) => selectedMembers.contains(m['id']))
+          .toList();
+    }
+
+    if (selectedList.isEmpty) {
+      setState(() => isLoading = false); // ❗ important
+      AppToast.error(context, AppStrings.get("select_members_first"));
+      return;
+    }
+
+    await generateTripReportPDF(
+      tripName: widget.tripName,
+      members: selectedList,
+      expenses: expenses,
+      totalExpense: totalTripExpense,
+      allMembers: members,
     );
+    setState(() => isLoading = false); // 🔥 END LOADER
+    AppToast.success(context, AppStrings.get("pdf_downloaded"));
   }
-}
-Future<void> _generatePDF() async {
-  List<Map<String, dynamic>> selectedList;
-
-  if (selectAll) {
-    selectedList = members;
-  } else {
-    selectedList = members
-        .where((m) => selectedMembers.contains(m['id']))
-        .toList();
-  }
-
-  if (selectedList.isEmpty) {
-    AppToast.error(context, "Select members first!");
-    return;
-  }
-
-  await generateTripReportPDF(
-    tripName: widget.tripName,
-    members: selectedList,
-    expenses: expenses,
-    totalExpense: totalTripExpense,
-    allMembers: members,
-  );
-
-  AppToast.success(context, "PDF downloaded successfully!");
-  RatingService.trigger(context);
-}
   // Future<void> _downloadPDF() async {
   // AdHelper.showInterstitialAd();// 🔥 add this
   //   List<Map<String, dynamic>> selectedList;
@@ -688,82 +691,86 @@ Future<void> _generatePDF() async {
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
 
-        child: DataTable(
-          columnSpacing: 20,
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          physics: BouncingScrollPhysics(),
+          child: DataTable(
+            columnSpacing: 20,
 
-          columns: const [
-            DataColumn(label: Text("Person")),
-            DataColumn(label: Text("Deposit")),
-            DataColumn(label: Text("Spent")),
-            DataColumn(label: Text("Share")),
-            DataColumn(label: Text("Balance")),
-          ],
+            columns: [
+              DataColumn(label: Text(AppStrings.get("person"))),
+              DataColumn(label: Text(AppStrings.get("deposit"))),
+              DataColumn(label: Text(AppStrings.get("spent"))),
+              DataColumn(label: Text(AppStrings.get("share"))),
+              DataColumn(label: Text(AppStrings.get("balance"))),
+            ],
 
-          rows: members.map((m) {
-            double share = memberShares[m['id']] ?? 0;
+            rows: members.map((m) {
+              double share = memberShares[m['id']] ?? 0;
 
-            double deposit = memberDeposits[m['id']] ?? 0;
+              double deposit = memberDeposits[m['id']] ?? 0;
 
-            double spent = memberSpent[m['id']] ?? 0;
+              double spent = memberSpent[m['id']] ?? 0;
 
-            double balance;
+              double balance;
 
-            if (m['isAdmin'] == 1) {
-              deposit = 0;
+              if (m['isAdmin'] == 1) {
+                deposit = 0;
 
-              double totalDeposits = 0;
+                double totalDeposits = 0;
 
-              for (var member in members) {
-                if (member['isAdmin'] != 1) {
-                  totalDeposits += memberDeposits[member['id']] ?? 0;
+                for (var member in members) {
+                  if (member['isAdmin'] != 1) {
+                    totalDeposits += memberDeposits[member['id']] ?? 0;
+                  }
                 }
+
+                balance = spent - share - totalDeposits;
+                // print(totalDeposits);
+              } else {
+                balance = deposit + spent - share;
               }
-
-              balance = spent - share - totalDeposits;
-              // print(totalDeposits);
-            } else {
-              balance = deposit + spent - share;
-            }
-            return DataRow(
-              cells: [
-                DataCell(
-                  Text(
-                    m['isAdmin'] == 1 ? "${m['name']} ⭐" : m['name'],
-                    style: TextStyle(
-                      fontWeight: m['isAdmin'] == 1
-                          ? FontWeight.bold
-                          : FontWeight.normal,
-                    ),
-                  ),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => MemberLedgerScreen(
-                          memberId: m['id'],
-                          memberName: m['name'],
-                          tripId: widget.tripId,
-                        ),
+              return DataRow(
+                cells: [
+                  DataCell(
+                    Text(
+                      m['isAdmin'] == 1 ? "${m['name']} ⭐" : m['name'],
+                      style: TextStyle(
+                        fontWeight: m['isAdmin'] == 1
+                            ? FontWeight.bold
+                            : FontWeight.normal,
                       ),
-                    );
-                  },
-                ),
-                DataCell(Text("₹${deposit.toStringAsFixed(0)}")),
-                DataCell(Text("₹${spent.toStringAsFixed(0)}")),
-                DataCell(Text("₹${share.toStringAsFixed(0)}")),
-                DataCell(
-                  Text(
-                    "₹${balance.toStringAsFixed(0)}",
+                    ),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => MemberLedgerScreen(
+                            memberId: m['id'],
+                            memberName: m['name'],
+                            tripId: widget.tripId,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  DataCell(Text("₹${deposit.toStringAsFixed(0)}")),
+                  DataCell(Text("₹${spent.toStringAsFixed(0)}")),
+                  DataCell(Text("₹${share.toStringAsFixed(0)}")),
+                  DataCell(
+                    Text(
+                      "₹${balance.toStringAsFixed(0)}",
 
-                    style: TextStyle(
-                      color: balance >= 0 ? Colors.green : Colors.red,
-                      fontWeight: FontWeight.bold,
+                      style: TextStyle(
+                        color: balance >= 0 ? Colors.green : Colors.red,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
-                ),
-              ],
-            );
-          }).toList(),
+                ],
+              );
+            }).toList(),
+          ),
         ),
       ),
     );
@@ -781,214 +788,247 @@ Future<void> _generatePDF() async {
 
         flexibleSpace: Container(
           decoration: const BoxDecoration(
-            gradient: LinearGradient(colors: [Colors.teal, Colors.tealAccent]),
+            gradient: LinearGradient(colors: [Colors.teal, Colors.teal]),
           ),
         ),
       ),
 
-      body: RefreshIndicator(
-        onRefresh: _loadReport,
-
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-
-          children: [
-            Row(
+      body: Stack(
+        children: [
+          /// 🔥 MAIN UI (always visible)
+          RefreshIndicator(
+            onRefresh: _loadReport,
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              physics: BouncingScrollPhysics(),
               children: [
-                /// SELECT MEMBERS
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: _openMemberSelector,
-
-                    icon: const Icon(Icons.people, color: Colors.teal),
-
-                    label: const Text(
-                      "Members",
-                      style: TextStyle(color: Colors.teal),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: _openMemberSelector,
+                        icon: const Icon(Icons.people, color: Colors.teal),
+                        label: Text(
+                          AppStrings.get("members"),
+                          style: TextStyle(color: Colors.teal),
+                        ),
+                      ),
                     ),
-                  ),
+
+                    const SizedBox(width: 10),
+
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: _downloadPDF,
+                        icon: const Icon(Icons.picture_as_pdf),
+                        label: Text(AppStrings.get("pdf")),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.teal,
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
 
-                const SizedBox(width: 10),
+                const SizedBox(height: 16),
 
-                /// DOWNLOAD PDF
-                Expanded(
+                /// SETTLEMENT BUTTON
+                SizedBox(
+                  width: double.infinity,
                   child: ElevatedButton.icon(
-                    onPressed: _downloadPDF,
+                    onPressed: () async {
+                      setState(() => isLoading = true); // 🔥 start loader
 
-                    icon: const Icon(Icons.picture_as_pdf),
+                      await Future.delayed(
+                        Duration(milliseconds: 200),
+                      ); // 👈 smooth feel
 
-                    label: const Text("PDF"),
+                      await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => SettlementScreen(
+                            tripId: widget.tripId,
+                            tripName: widget.tripName,
+                          ),
+                        ),
+                      );
 
+                      setState(
+                        () => isLoading = false,
+                      ); // 🔥 back aake loader off
+                    },
+                    icon: const Icon(Icons.account_balance_wallet),
+                    label: Text(AppStrings.get("view_settlement")),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.teal,
+                      backgroundColor: Colors.orange,
                       foregroundColor: Colors.white,
                     ),
                   ),
                 ),
+
+                const SizedBox(height: 20),
+
+                Text(
+                  AppStrings.get("member_expense_details"),
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.teal,
+                  ),
+                ),
+
+                const SizedBox(height: 10),
+
+                _memberTable(),
+
+                const SizedBox(height: 20),
+
+                Text(
+                  AppStrings.get("expense_list"),
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.teal,
+                  ),
+                ),
+
+                const SizedBox(height: 10),
+
+                ListView.builder(
+                  itemCount: expenses.length,
+                  shrinkWrap: true,
+                  physics: NeverScrollableScrollPhysics(), // important
+
+                  itemBuilder: (context, index) {
+                    var e = expenses[index];
+                    String date = formatDate(e['travelDate']);
+
+                    return Container(
+                      margin: const EdgeInsets.symmetric(vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).cardColor,
+                        borderRadius: BorderRadius.circular(14),
+                        boxShadow: const [
+                          BoxShadow(color: Colors.black12, blurRadius: 6),
+                        ],
+                      ),
+                      child: ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor: Colors.teal.shade100,
+                          child: Icon(Icons.currency_rupee, color: Colors.teal),
+                        ),
+                        title: Text(e['description'] ?? ""),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(e['category'] ?? ""),
+                            if (date.isNotEmpty)
+                              Text(
+                                date,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                          ],
+                        ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              "₹${(e['amount'] ?? 0).toStringAsFixed(0)}",
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                                color: Colors.teal,
+                              ),
+                            ),
+                            PopupMenuButton(
+                              itemBuilder: (context) => [
+                                PopupMenuItem(
+                                  value: "edit",
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.edit, color: Colors.blue),
+                                      SizedBox(width: 8),
+                                      Text(AppStrings.get("edit")),
+                                    ],
+                                  ),
+                                ),
+                                PopupMenuItem(
+                                  value: "delete",
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.delete, color: Colors.red),
+                                      SizedBox(width: 8),
+                                      Text(AppStrings.get("delete")),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                              onSelected: (value) {
+                                if (value == "edit") _editExpense(e);
+                                if (value == "delete") _deleteExpense(e['id']);
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+
+                const SizedBox(height: 20),
+
+                if (AppConfig.enableAds && !PurchaseService.isAdsRemoved)
+                  BannerAdWidget(),
+
+                const SizedBox(height: 20),
               ],
             ),
+          ),
 
-            const SizedBox(height: 16),
+          /// 🔥 TRANSPARENT LOADER
+          AnimatedOpacity(
+            opacity: isLoading ? 1 : 0,
+            duration: Duration(milliseconds: 250), // 🔥 smooth fade
 
-            /// SETTLEMENT BUTTON
-            SizedBox(
-              width: double.infinity,
+            child: IgnorePointer(
+              ignoring: !isLoading, // 👈 clicks disable only when loading
 
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => SettlementScreen(
-                        tripId: widget.tripId,
-                        tripName: widget.tripName,
-                      ),
+              child: Container(
+                color: Colors.black.withOpacity(0.1), // 🔥 softer
+
+                child: Center(
+                  child: Container(
+                    padding: EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(14),
                     ),
-                  );
-                },
-
-                icon: const Icon(Icons.account_balance_wallet),
-
-                label: const Text("View Settlement"),
-
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.orange,
-                  foregroundColor: Colors.white,
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            Text(
-              "Member Expense Details",
-
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.teal,
-              ),
-            ),
-
-            const SizedBox(height: 10),
-
-            _memberTable(),
-
-            const SizedBox(height: 20),
-
-            Text(
-              "Expenses List",
-
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.teal,
-              ),
-            ),
-
-            const SizedBox(height: 10),
-
-            ...expenses.map((e) {
-              String date = formatDate(e['travelDate']);
-
-              return Container(
-                margin: const EdgeInsets.symmetric(vertical: 6),
-
-                decoration: BoxDecoration(
-                  color: Theme.of(context).cardColor,
-                  borderRadius: BorderRadius.circular(14),
-                  boxShadow: const [
-                    BoxShadow(color: Colors.black12, blurRadius: 6),
-                  ],
-                ),
-
-                child: ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: Colors.teal.shade100,
-                    child: Icon(Icons.currency_rupee, color: Colors.teal),
-                  ),
-
-                  title: Text(e['description'] ?? ""),
-
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-
-                    children: [
-                      Text(e['category'] ?? ""),
-
-                      if (date.isNotEmpty)
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        CircularProgressIndicator(color: Colors.teal),
+                        SizedBox(height: 10),
                         Text(
-                          date,
+                          "Loading...",
                           style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[600],
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
+                                ? Colors.black
+                                : Colors.black,
                           ),
                         ),
-                    ],
-                  ),
-
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-
-                    children: [
-                      Text(
-                        "₹${(e['amount'] ?? 0).toStringAsFixed(0)}",
-
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                          color: Colors.teal,
-                        ),
-                      ),
-
-                      PopupMenuButton(
-                        itemBuilder: (context) => [
-                          const PopupMenuItem(
-                            value: "edit",
-                            child: Row(
-                              children: [
-                                Icon(Icons.edit, color: Colors.blue),
-                                SizedBox(width: 8),
-                                Text("Edit"),
-                              ],
-                            ),
-                          ),
-
-                          const PopupMenuItem(
-                            value: "delete",
-                            child: Row(
-                              children: [
-                                Icon(Icons.delete, color: Colors.red),
-                                SizedBox(width: 8),
-                                Text("Delete"),
-                              ],
-                            ),
-                          ),
-                        ],
-
-                        onSelected: (value) {
-                          if (value == "edit") {
-                            _editExpense(e);
-                          }
-
-                          if (value == "delete") {
-                            _deleteExpense(e['id']);
-                          }
-                        },
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-              );
-            }),
-            SizedBox(height: 20),
-
-/// 🔥 Banner Ad
- if (AppConfig.enableAds && !PurchaseService.isAdsRemoved)
-  const BannerAdWidget(),
-  SizedBox(height: 20),
-          ],
-        ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

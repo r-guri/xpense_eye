@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:my_app/utils/app_strings.dart';
 import '../db_helper.dart';
 import 'package:intl/intl.dart';
 import 'ads/banner_ad_widget.dart';
 import 'services/purchase_service.dart';
 import '../utils/app_config.dart';
+import '../utils/app_toast.dart';
 class MemberLedgerScreen extends StatefulWidget {
   final int memberId;
   final String memberName;
@@ -62,9 +64,10 @@ class _MemberLedgerScreenState extends State<MemberLedgerScreen> {
 
   Future<void> _addTransaction() async {
     double amount = double.tryParse(amountCtrl.text) ?? 0;
-
-    if (amount <= 0) return;
-
+ if (amount <= 0) {
+    AppToast.error(context, AppStrings.get('amount_positive'));
+    return;
+  }
     await DBHelper.instance.insert('member_transactions', {
       'tripId': widget.tripId,
       'memberId': widget.memberId,
@@ -76,6 +79,7 @@ class _MemberLedgerScreenState extends State<MemberLedgerScreen> {
 
     amountCtrl.clear();
     noteCtrl.clear();
+  AppToast.success(context, AppStrings.get('entry_added'));
 
     _loadLedger();
   }
@@ -86,7 +90,7 @@ class _MemberLedgerScreenState extends State<MemberLedgerScreen> {
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
 
       appBar: AppBar(
-        title: Text("${widget.memberName} Ledger"),
+        title: Text("${widget.memberName} ${AppStrings.get("ledger")}"),
         backgroundColor: Colors.teal,
       ),
 
@@ -112,7 +116,7 @@ class _MemberLedgerScreenState extends State<MemberLedgerScreen> {
 
                 children: [
                   Text(
-                    "Current Balance",
+                    AppStrings.get("current_balance"),
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -150,7 +154,7 @@ class _MemberLedgerScreenState extends State<MemberLedgerScreen> {
                     controller: amountCtrl,
                     keyboardType: TextInputType.number,
                     decoration: InputDecoration(
-                      labelText: "Amount",
+                      labelText: AppStrings.get("amount"),
                       prefixIcon: Icon(
                         Icons.currency_rupee,
                         color: Colors.teal,
@@ -163,7 +167,7 @@ class _MemberLedgerScreenState extends State<MemberLedgerScreen> {
                   TextField(
                     controller: noteCtrl,
                     decoration: InputDecoration(
-                      labelText: "Note",
+                      labelText: AppStrings.get("note"),
                       prefixIcon: Icon(Icons.note, color: Colors.teal),
                     ),
                   ),
@@ -179,7 +183,7 @@ class _MemberLedgerScreenState extends State<MemberLedgerScreen> {
                         onChanged: (v) => setState(() => type = v.toString()),
                       ),
 
-                      Text("Deposit"),
+                      Text(AppStrings.get("deposit")),
 
                       Radio(
                         value: "withdraw",
@@ -187,7 +191,7 @@ class _MemberLedgerScreenState extends State<MemberLedgerScreen> {
                         onChanged: (v) => setState(() => type = v.toString()),
                       ),
 
-                      Text("Withdraw"),
+                      Text(AppStrings.get("withdraw")),
                     ],
                   ),
 
@@ -201,7 +205,7 @@ class _MemberLedgerScreenState extends State<MemberLedgerScreen> {
 
                       icon: Icon(Icons.add),
 
-                      label: Text("Add Entry"),
+                      label: Text(AppStrings.get("add_entry")),
 
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.teal,
@@ -221,7 +225,7 @@ class _MemberLedgerScreenState extends State<MemberLedgerScreen> {
               padding: EdgeInsets.symmetric(horizontal: 16),
 
               child: Text(
-                "Transactions",
+                AppStrings.get("transactions"),
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,

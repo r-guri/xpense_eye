@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:my_app/utils/app_strings.dart';
 import '../db_helper.dart';
 import '../utils/app_toast.dart';
 import 'ads/banner_ad_widget.dart';
 import '../utils/app_config.dart';
+import '../utils/app_strings.dart';
 import 'services/purchase_service.dart';
+
 class AddTripScreen extends StatefulWidget {
   final int userId;
   AddTripScreen({required this.userId});
@@ -43,7 +46,7 @@ class _AddTripScreenState extends State<AddTripScreen> {
         destCtrl.text.isEmpty ||
         startDate == null ||
         endDate == null) {
-      AppToast.error(context, "Please fill all fields");
+      AppToast.error(context, AppStrings.get("fill_required"));
       return;
     }
 
@@ -57,7 +60,7 @@ class _AddTripScreenState extends State<AddTripScreen> {
         'startDate': startDate!.toIso8601String(),
         'endDate': endDate!.toIso8601String(),
       });
-      AppToast.success(context, " Added successfully!");
+      AppToast.success(context, AppStrings.get("added_success"));
       await Future.delayed(Duration(seconds: 2));
 
       Navigator.pop(context, true);
@@ -102,12 +105,12 @@ class _AddTripScreenState extends State<AddTripScreen> {
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
 
       appBar: AppBar(
-        title: Text("Create Trip/Group"),
+        title: Text(AppStrings.get("create_trip")),
 
         flexibleSpace: Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [Colors.teal, Colors.tealAccent.shade400],
+              colors: [Colors.teal, Colors.teal],
             ),
           ),
         ),
@@ -135,7 +138,7 @@ class _AddTripScreenState extends State<AddTripScreen> {
 
                 children: [
                   Text(
-                    "New Trip/Group",
+                    AppStrings.get("new_trip"),
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
@@ -149,7 +152,9 @@ class _AddTripScreenState extends State<AddTripScreen> {
                   TextField(
                     controller: nameCtrl,
                     decoration: _inputStyle(
-                      "Name / Title", // Replace "Trip Name" style with generic
+                      AppStrings.get(
+                        "title",
+                      ), // Replace "Trip Name" style with generic
                       Icons
                           .drive_file_rename_outline, // Icon for generic name/title
                     ),
@@ -161,7 +166,9 @@ class _AddTripScreenState extends State<AddTripScreen> {
                   TextField(
                     controller: destCtrl,
                     decoration: _inputStyle(
-                      "Description", // Spelling fix + generic text
+                      AppStrings.get(
+                        "description",
+                      ), // Spelling fix + generic text
                       Icons.note_alt_outlined, // Icon for description/note
                     ),
                   ),
@@ -178,7 +185,7 @@ class _AddTripScreenState extends State<AddTripScreen> {
 
                           label: Text(
                             startDate == null
-                                ? "Start Date"
+                                ? AppStrings.get("start_date")
                                 : startDate!.toLocal().toString().split(' ')[0],
                             style: TextStyle(color: Colors.teal),
                           ),
@@ -203,7 +210,7 @@ class _AddTripScreenState extends State<AddTripScreen> {
 
                           label: Text(
                             endDate == null
-                                ? "End Date"
+                                ? AppStrings.get("end_date")
                                 : endDate!.toLocal().toString().split(' ')[0],
                             style: TextStyle(color: Colors.teal),
                           ),
@@ -237,7 +244,11 @@ class _AddTripScreenState extends State<AddTripScreen> {
                           )
                         : Icon(Icons.save),
 
-                    label: Text(_isLoading ? "Saving..." : "Save"),
+                    label: Text(
+                      _isLoading
+                          ? AppStrings.get("saving")
+                          : AppStrings.get("save"),
+                    ),
 
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.teal,
@@ -260,8 +271,8 @@ class _AddTripScreenState extends State<AddTripScreen> {
               ),
             ),
             SizedBox(height: 20),
-        if (AppConfig.enableAds && !PurchaseService.isAdsRemoved)
-  const BannerAdWidget(),
+            if (AppConfig.enableAds && !PurchaseService.isAdsRemoved)
+              BannerAdWidget(),
           ],
         ),
       ),

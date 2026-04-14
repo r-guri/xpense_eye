@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:my_app/utils/app_strings.dart';
 import '../db_helper.dart';
 import 'package:flutter/services.dart';
 import '../utils/app_toast.dart';
@@ -62,7 +63,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     String mobile = _mobileCtrl.text.trim();
 
     if (!RegExp(r'^[6-9][0-9]{9}$').hasMatch(mobile)) {
-      AppToast.error(context, "Enter valid 10 digit mobile number");
+      AppToast.error(context, AppStrings.get("valid_mobile"));
       return;
     }
 
@@ -81,7 +82,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     setState(() => _isLoading = false);
 
-    AppToast.success(context, "Profile updated successfully!");
+    AppToast.success(context, AppStrings.get("profile_updated"));
   }
 
   /// INPUT STYLE
@@ -128,12 +129,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
       appBar: AppBar(
 
-        title: const Text("Profile"),
+        title:  Text(AppStrings.get("profile")),
 
         flexibleSpace: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
-              colors: [Colors.teal, Colors.tealAccent],
+              colors: [Colors.teal, Colors.teal],
             ),
           ),
         ),
@@ -189,7 +190,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                   TextField(
                     controller: _nameCtrl,
-                    decoration: _inputStyle("Name", Icons.person),
+                    decoration: _inputStyle(AppStrings.get("name"), Icons.person),
                   ),
 
                   const SizedBox(height: 12),
@@ -197,7 +198,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   TextField(
                     controller: _emailCtrl,
                     readOnly: true,
-                    decoration: _inputStyle("Email", Icons.email),
+                    decoration: _inputStyle(AppStrings.get("email"), Icons.email),
                   ),
 
                   const SizedBox(height: 12),
@@ -208,14 +209,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     maxLength: 10,
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                     decoration:
-                        _inputStyle("Mobile Number", Icons.phone),
+                        _inputStyle(AppStrings.get("mobile"), Icons.phone),
                   ),
 
                   const SizedBox(height: 12),
 
                   TextField(
                     controller: _addressCtrl,
-                    decoration: _inputStyle("Address", Icons.home),
+                    decoration: _inputStyle(AppStrings.get("address"), Icons.home),
                   ),
 
                   const SizedBox(height: 20),
@@ -253,8 +254,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     strokeWidth: 2,
                                   ),
                                 )
-                              : const Text(
-                                  "Save",
+                              :  Text(
+                                  AppStrings.get("save"),
                                   style: TextStyle(
                                     fontSize: 16,
                                     color: Colors.white,
@@ -286,8 +287,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                           ),
 
-                          child: const Text(
-                            "Logout",
+                          child:  Text(
+                            AppStrings.get("logout"),
                             style: TextStyle(
                               fontSize: 16,
                               color: Colors.white,

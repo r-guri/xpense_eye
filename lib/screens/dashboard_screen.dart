@@ -21,8 +21,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'services/purchase_service.dart';
 import 'services/rating_service.dart';
+import 'services/review_service.dart';
 // import 'ads/banner_ad_widget.dart';
 import 'ads/ad_helper.dart';
+import '../utils/app_strings.dart';
 
 // import '../utils/google_drive_backup.dart';
 class DashboardScreen extends StatefulWidget {
@@ -32,6 +34,42 @@ class DashboardScreen extends StatefulWidget {
 
   @override
   _DashboardScreenState createState() => _DashboardScreenState();
+}
+
+class LanguageDropdown extends StatefulWidget {
+  final VoidCallback onChanged;
+
+  const LanguageDropdown({super.key, required this.onChanged});
+
+  @override
+  State<LanguageDropdown> createState() => _LanguageDropdownState();
+}
+
+class _LanguageDropdownState extends State<LanguageDropdown> {
+  void _showLangMenu() async {
+    final selected = await showMenu<String>(
+      context: context,
+      position: RelativeRect.fromLTRB(1000, 80, 10, 0),
+      items: [
+        PopupMenuItem(value: 'en', child: Text("English")),
+        PopupMenuItem(value: 'hi', child: Text("हिन्दी")),
+        PopupMenuItem(value: 'pa', child: Text("ਪੰਜਾਬੀ")),
+      ],
+    );
+
+    if (selected != null) {
+      await AppStrings.setLang(selected); // 🔥 IMPORTANT
+      widget.onChanged();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      icon: Image.asset('assets/language.png', height: 22, color: Colors.white),
+      onPressed: _showLangMenu,
+    );
+  }
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
@@ -48,6 +86,101 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void initState() {
     super.initState();
     _loadTrips();
+  }
+
+  void showRateAppDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                /// ⭐ ICON
+                Icon(Icons.star, color: Colors.orange, size: 60),
+
+                SizedBox(height: 10),
+
+                /// TITLE
+                Text(
+                  "Enjoying Xpense Eye?",
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center,
+                ),
+
+                SizedBox(height: 10),
+
+                /// MESSAGE
+                Text(
+                  "A 5-star rating takes just a few seconds,\n"
+                  "but helps us a lot to improve the app 🚀",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.grey[700]),
+                ),
+
+                SizedBox(height: 20),
+
+                /// BUTTONS
+                Row(
+                  children: [
+                    /// LATER BUTTON
+                    Expanded(
+                      child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        onPressed: () {
+                          Navigator.pop(context);
+                        },
+                        child: Text("Later"),
+                      ),
+                    ),
+
+                    SizedBox(width: 10),
+
+                    /// RATE NOW BUTTON
+                    Expanded(
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.teal,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: EdgeInsets.symmetric(vertical: 12),
+                        ),
+                        onPressed: () {
+                          Navigator.pop(context);
+                          ReviewService.openReview();
+                        },
+                        child: Text("Rate Now ⭐"),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  String _formatDate(String isoDate) {
+    DateTime date = DateTime.parse(isoDate);
+
+    String day = date.day.toString().padLeft(2, '0');
+    String month = date.month.toString().padLeft(2, '0');
+    String year = date.year.toString();
+
+    return "$day-$month-$year";
   }
 
   Future<void> _loadTrips() async {
@@ -106,32 +239,32 @@ class _DashboardScreenState extends State<DashboardScreen> {
       totalDeposit = sumDeposit;
     });
   }
-void _logout() async {
-  SharedPreferences prefs = await SharedPreferences.getInstance();
 
-  await prefs.clear();
+  void _logout() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
 
-  final GoogleSignIn googleSignIn = GoogleSignIn();
+    await prefs.clear();
 
-  try {
-    // Firebase logout
-    await FirebaseAuth.instance.signOut();
+    final GoogleSignIn googleSignIn = GoogleSignIn();
 
-    // Google logout
-    if (await googleSignIn.isSignedIn()) {
-      await googleSignIn.disconnect(); // safe now
+    try {
+      // Firebase logout
+      await FirebaseAuth.instance.signOut();
+
+      // Google logout
+      if (await googleSignIn.isSignedIn()) {
+        await googleSignIn.disconnect(); // safe now
+      }
+    } catch (e) {
+      print("Logout error: $e");
     }
-  } catch (e) {
-    print("Logout error: $e");
+
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => LoginScreen()),
+      (route) => false,
+    );
   }
-
-  Navigator.pushAndRemoveUntil(
-    context,
-    MaterialPageRoute(builder: (_) => LoginScreen()),
-    (route) => false,
-  );
-}
-
 
   IconData _categoryIcon(String? category) {
     switch (category?.toLowerCase()) {
@@ -216,16 +349,24 @@ void _logout() async {
       padding: const EdgeInsets.all(16),
       child: Row(
         children: [
-          _statCard("Total", trips.length.toString(), Icons.card_travel),
-
-          const SizedBox(width: 10),
-
-          _statCard("Members", totalMembers.toString(), Icons.group),
+          _statCard(
+            AppStrings.get("total"),
+            trips.length.toString(),
+            Icons.card_travel,
+          ),
 
           const SizedBox(width: 10),
 
           _statCard(
-            "Expense",
+            AppStrings.get("members"),
+            totalMembers.toString(),
+            Icons.group,
+          ),
+
+          const SizedBox(width: 10),
+
+          _statCard(
+            AppStrings.get("expense"),
             "₹${totalExpense.toStringAsFixed(0)}",
             Icons.currency_rupee,
           ),
@@ -233,7 +374,7 @@ void _logout() async {
           const SizedBox(width: 10),
 
           _statCard(
-            "Deposit",
+            AppStrings.get("deposit"),
             "₹${totalDeposit.toStringAsFixed(0)}",
             Icons.account_balance_wallet,
           ),
@@ -261,16 +402,16 @@ void _logout() async {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Text(
-                "Recent Expenses",
+                AppStrings.get("recent_expenses"),
                 style: TextStyle(
-                  fontSize: 18,
+                  fontSize: 15,
                   fontWeight: FontWeight.bold,
                   color: Colors.teal,
                 ),
               ),
             ),
 
-            SizedBox(height: 12),
+            SizedBox(height: 5),
 
             SizedBox(
               height: 110,
@@ -322,7 +463,7 @@ void _logout() async {
                           ],
                         ),
 
-                        SizedBox(height: 8),
+                        SizedBox(height: 5),
 
                         Text(
                           e['description'] ?? "",
@@ -348,7 +489,7 @@ void _logout() async {
               ),
             ),
 
-            SizedBox(height: 10),
+            // SizedBox(height: 2),
           ],
         );
       },
@@ -537,15 +678,15 @@ void _logout() async {
                       ],
                     ),
 
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 5),
 
                     /// DATE
                     Text(
-                      "${t['startDate'].split('T')[0]} → ${t['endDate'].split('T')[0]}",
-                      style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                      "${_formatDate(t['startDate'])} → ${_formatDate(t['endDate'])}",
+                      style: TextStyle(color: Colors.grey[600], fontSize: 14),
                     ),
 
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 5),
 
                     /// STATS ROW
                     Row(
@@ -554,7 +695,7 @@ void _logout() async {
 
                         const SizedBox(width: 4),
 
-                        Text("$memberCount Members"),
+                        Text("$memberCount ${AppStrings.get('members')}"),
 
                         const SizedBox(width: 16),
 
@@ -575,7 +716,7 @@ void _logout() async {
                     /// BUTTONS
                     Row(
                       children: [
-                        _actionBtn(Icons.group, "Members", () {
+                        _actionBtn(Icons.group, AppStrings.get("members"), () {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
@@ -589,17 +730,21 @@ void _logout() async {
 
                         const SizedBox(width: 8),
 
-                        _actionBtn(Icons.currency_rupee, "Expense", () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => AddExpenseScreen(
-                                tripId: t['id'],
-                                tripName: t['name'],
+                        _actionBtn(
+                          Icons.currency_rupee,
+                          AppStrings.get("expense"),
+                          () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => AddExpenseScreen(
+                                  tripId: t['id'],
+                                  tripName: t['name'],
+                                ),
                               ),
-                            ),
-                          );
-                        }),
+                            );
+                          },
+                        ),
                       ],
                     ),
                   ],
@@ -751,35 +896,35 @@ void _logout() async {
                     }
                   },
                   itemBuilder: (context) => [
-                    const PopupMenuItem(
+                    PopupMenuItem(
                       value: "view",
                       child: Row(
                         children: [
                           Icon(Icons.bar_chart, color: Colors.teal),
                           SizedBox(width: 8),
-                          Text("View Report"),
+                          Text(AppStrings.get('view_report')),
                         ],
                       ),
                     ),
 
-                    const PopupMenuItem(
+                    PopupMenuItem(
                       value: "edit",
                       child: Row(
                         children: [
                           Icon(Icons.edit, color: Colors.blue),
                           SizedBox(width: 8),
-                          Text("Edit"),
+                          Text(AppStrings.get("edit")),
                         ],
                       ),
                     ),
 
-                    const PopupMenuItem(
+                    PopupMenuItem(
                       value: "delete",
                       child: Row(
                         children: [
                           Icon(Icons.delete, color: Colors.red),
                           SizedBox(width: 8),
-                          Text("Delete"),
+                          Text(AppStrings.get("delete")),
                         ],
                       ),
                     ),
@@ -800,16 +945,29 @@ void _logout() async {
       child: OutlinedButton.icon(
         onPressed: onTap,
 
-        icon: Icon(icon, size: 18),
+        icon: Icon(icon, size: 20), // 🔥 thoda bigger
 
-        label: Text(label),
+        label: Text(
+          label,
+          style: const TextStyle(
+            fontWeight: FontWeight.w600, // 🔥 bold feel
+            fontSize: 14,
+          ),
+        ),
 
         style: OutlinedButton.styleFrom(
           foregroundColor: Colors.teal,
 
-          side: const BorderSide(color: Colors.teal),
+          side: BorderSide(
+            color: Colors.teal.withOpacity(0.6), // 🔥 soft border
+          ),
 
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          // shape: RoundedRectangleBorder(
+          //   borderRadius: BorderRadius.circular(12), // 🔥 more smooth
+          // ),
+          padding: const EdgeInsets.symmetric(vertical: 10),
+
+          elevation: 0,
         ),
       ),
     );
@@ -822,10 +980,16 @@ void _logout() async {
 
       appBar: AppBar(
         title: Text("Welcome, ${widget.userName}"),
-
+        actions: [
+          LanguageDropdown(
+            onChanged: () {
+              setState(() {});
+            },
+          ),
+        ],
         flexibleSpace: Container(
           decoration: const BoxDecoration(
-            gradient: LinearGradient(colors: [Colors.teal, Colors.tealAccent]),
+            gradient: LinearGradient(colors: [Colors.teal, Colors.teal]),
           ),
         ),
       ),
@@ -849,7 +1013,7 @@ void _logout() async {
             ListTile(
               leading: Icon(Icons.person, color: Colors.teal),
 
-              title: Text("Profile"),
+              title: Text(AppStrings.get('profile')),
 
               onTap: () {
                 Navigator.push(
@@ -864,30 +1028,32 @@ void _logout() async {
                 );
               },
             ),
-    ListTile(
-  leading: Icon(Icons.download, color: Colors.teal),
-  title: Text("Export Backup"),
-  onTap: () async {
-    Navigator.pop(context);
+            ListTile(
+              leading: Icon(Icons.download, color: Colors.teal),
+              title: Text(AppStrings.get('export_backup')),
+              onTap: () async {
+                Navigator.pop(context);
 
-    if (AppConfig.enableAds && PurchaseService.isAdsRemoved) {
-      /// 👑 Premium user → direct export
-      await BackupService.exportBackup(widget.userId);
+                if (!AppConfig.enableAds || PurchaseService.isAdsRemoved) {
+                  /// 👑 Premium user → direct export
+                  await BackupService.exportBackup(widget.userId);
 
-      AppToast.success(context, "Backup exported successfully");
+                  AppToast.success(context, AppStrings.get("backup_exported"));
+                } else {
+                  /// 💰 Free user → ad + export
+                  AdHelper.showInterstitialAd(
+                    onAdClosed: () async {
+                      await BackupService.exportBackup(widget.userId);
 
-    } else {
-      /// 💰 Free user → ad + export
-      AdHelper.showInterstitialAd(
-        onAdClosed: () async {
-          await BackupService.exportBackup(widget.userId);
-
-          AppToast.success(context, "Backup exported successfully");
-        },
-      );
-    }
-  },
-),
+                      AppToast.success(
+                        context,
+                        AppStrings.get("backup_exported"),
+                      );
+                    },
+                  );
+                }
+              },
+            ),
             // ListTile(
             //   leading: Icon(Icons.download, color: Colors.teal),
             //   title: Text("Export Backup"),
@@ -898,37 +1064,44 @@ void _logout() async {
             //     AppToast.success(context, "Backup exported successfully");
             //   },
             // ),
-ListTile(
-  leading: Icon(Icons.upload, color: Colors.teal),
-  title: Text("Import Backup"),
-  onTap: () async {
-    Navigator.pop(context);
+            ListTile(
+              leading: Icon(Icons.upload, color: Colors.teal),
+              title: Text(AppStrings.get('import_backup')),
+              onTap: () async {
+                Navigator.pop(context);
 
-    if (AppConfig.enableAds && PurchaseService.isAdsRemoved) {
-      bool success =
-          await BackupService.importBackup(widget.userId);
+                if (!AppConfig.enableAds || PurchaseService.isAdsRemoved) {
+                  bool success = await BackupService.importBackup(
+                    widget.userId,
+                  );
 
-      if (success) {
-        _refreshKey.currentState?.show();
-        AppToast.success(context, "Backup restored. Refreshing...");
-      }
+                  if (success) {
+                    _refreshKey.currentState?.show();
+                    AppToast.success(
+                      context,
+                      AppStrings.get("backup_restored"),
+                    );
+                  }
+                } else {
+                  AdHelper.showInterstitialAd(
+                    onAdClosed: () async {
+                      bool success = await BackupService.importBackup(
+                        widget.userId,
+                      );
 
-    } else {
-      AdHelper.showInterstitialAd(
-        onAdClosed: () async {
-          bool success =
-              await BackupService.importBackup(widget.userId);
-
-          if (success) {
-            _refreshKey.currentState?.show();
-            AppToast.success(context, "Backup restored. Refreshing...");
-            RatingService.trigger(context);
-          }
-        },
-      );
-    }
-  },
-),
+                      if (success) {
+                        _refreshKey.currentState?.show();
+                        AppToast.success(
+                          context,
+                          AppStrings.get("backup_restored"),
+                        );
+                        RatingService.trigger(context);
+                      }
+                    },
+                  );
+                }
+              },
+            ),
             // ListTile(
             //   leading: Icon(Icons.upload, color: Colors.teal),
             //   title: Text("Import Backup"),
@@ -959,7 +1132,7 @@ ListTile(
             //             ),
             ListTile(
               leading: Icon(Icons.privacy_tip, color: Colors.teal),
-              title: Text("Privacy Policy"),
+              title: Text(AppStrings.get('privacy')),
               onTap: () {
                 Navigator.push(
                   context,
@@ -970,7 +1143,7 @@ ListTile(
 
             ListTile(
               leading: Icon(Icons.support_agent, color: Colors.teal),
-              title: Text("Support"),
+              title: Text(AppStrings.get('support')),
               onTap: () {
                 Navigator.push(
                   context,
@@ -981,7 +1154,7 @@ ListTile(
 
             ListTile(
               leading: Icon(Icons.info_outline, color: Colors.teal),
-              title: Text("About App"),
+              title: Text(AppStrings.get('about')),
               onTap: () {
                 Navigator.push(
                   context,
@@ -990,55 +1163,63 @@ ListTile(
               },
             ),
 
+            //             ListTile(
+            //   leading: Icon(Icons.star, color: Colors.orange),
+            //   title: Text("Remove Ads ₹99"),
+            //   onTap: () {
+            //     Navigator.pop(context);
+
+            //     showDialog(
+            //       context: context,
+            //       builder: (_) => AlertDialog(
+            //         title: Text("Go Premium 👑"),
+            //         content: Text(
+            //             "Remove all ads & enjoy smooth experience.\n\nOne-time payment Price: ₹99 (may vary slightly due to taxes)"),
+            //         actions: [
+            //           TextButton(
+            //             onPressed: () => Navigator.pop(context),
+            //             child: Text("Cancel"),
+            //           ),
+            //           ElevatedButton(
+            //             onPressed: () async {
+            //               Navigator.pop(context);
+
+            //               /// 🔥 MAIN FIX
+            //               await PurchaseService.buyRemoveAds();
+            //             },
+            //             child: Text("Buy ₹99"),
+            //           ),
+            //         ],
+            //       ),
+            //     );
+            //   },
+            // ),
+            /// 🔁 Restore Purchase
+            // ListTile(
+            //   leading: Icon(Icons.restore, color: Colors.teal),
+            //   title: Text("Restore Purchase"),
+            //   onTap: () async {
+            //     Navigator.pop(context);
+
+            //     await PurchaseService.restore();
+
+            //     ScaffoldMessenger.of(context).showSnackBar(
+            //       SnackBar(content: Text("Restoring purchase...")),
+            //     );
+            //   },
+            // ),
             ListTile(
-  leading: Icon(Icons.star, color: Colors.orange),
-  title: Text("Remove Ads ₹99"),
-  onTap: () {
-    Navigator.pop(context);
-
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: Text("Go Premium 👑"),
-        content: Text(
-            "Remove all ads & enjoy smooth experience.\n\nOne-time payment Price: ₹99 (may vary slightly due to taxes)"),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text("Cancel"),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(context);
-
-              /// 🔥 MAIN FIX
-              await PurchaseService.buyRemoveAds();
-            },
-            child: Text("Buy ₹99"),
-          ),
-        ],
-      ),
-    );
-  },
-),
-/// 🔁 Restore Purchase
-ListTile(
-  leading: Icon(Icons.restore, color: Colors.teal),
-  title: Text("Restore Purchase"),
-  onTap: () async {
-    Navigator.pop(context);
-
-    await PurchaseService.restore();
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Restoring purchase...")),
-    );
-  },
-),
+              leading: Icon(Icons.star, color: Colors.orange),
+              title: Text(AppStrings.get('rate_app')),
+              onTap: () {
+                Navigator.pop(context);
+                showRateAppDialog(context);
+              },
+            ),
             ListTile(
               leading: Icon(Icons.logout, color: Colors.red),
 
-              title: Text("Logout"),
+              title: Text(AppStrings.get('logout')),
 
               onTap: _logout,
             ),
@@ -1066,43 +1247,43 @@ ListTile(
                     ),
                   ),
 
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 50),
 
-                  InkWell(
-                    onTap: () async {
-                      final Uri emailLaunchUri = Uri(
-                        scheme: 'mailto',
+                  // InkWell(
+                  //   onTap: () async {
+                  //     final Uri emailLaunchUri = Uri(
+                  //       scheme: 'mailto',
 
-                        path: AppInfo.developerEmail,
+                  //       path: AppInfo.developerEmail,
 
-                        query: Uri.encodeFull(
-                          'subject=App Support / Suggestion',
-                        ),
-                      );
+                  //       query: Uri.encodeFull(
+                  //         'subject=App Support / Suggestion',
+                  //       ),
+                  //     );
 
-                      await launchUrl(emailLaunchUri);
-                    },
+                  //     await launchUrl(emailLaunchUri);
+                  //   },
 
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                  //   child: Row(
+                  //     mainAxisAlignment: MainAxisAlignment.center,
 
-                      children: [
-                        Icon(
-                          Icons.email_outlined,
-                          size: 16,
-                          color: Colors.teal,
-                        ),
+                  //     children: [
+                  //       Icon(
+                  //         Icons.email_outlined,
+                  //         size: 16,
+                  //         color: Colors.teal,
+                  //       ),
 
-                        SizedBox(width: 5),
+                  //       SizedBox(width: 5),
 
-                        Text(
-                          AppInfo.developerEmail,
-                          style: TextStyle(color: Colors.teal, fontSize: 13),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 30),
+                  //       Text(
+                  //         AppInfo.developerEmail,
+                  //         style: TextStyle(color: Colors.teal, fontSize: 13),
+                  //       ),
+                  //     ],
+                  //   ),
+                  // ),
+                  // const SizedBox(height: 30),
                 ],
               ),
             ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../db_helper.dart';
 import '../utils/app_toast.dart';
 import 'member_ledger_screen.dart';
+import '../utils/app_strings.dart';
 
 class AddMemberScreen extends StatefulWidget {
   final int tripId;
@@ -51,7 +52,7 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
 
   Future<void> _saveMember() async {
     if (nameCtrl.text.trim().isEmpty) {
-      AppToast.error(context, "Name is required!");
+      AppToast.error(context, AppStrings.get("name_required"));
       return;
     }
 
@@ -61,17 +62,17 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
     // }
 
     if (payCtrl.text.trim().isEmpty) {
-      AppToast.error(context, "Pay Amount is required!");
+      AppToast.error(context, AppStrings.get("pay_amount_required"));
       return;
     }
 
     double payAmount = double.tryParse(payCtrl.text) ?? -1;
 
     if (payAmount < 0) {
-      AppToast.error(context, "Enter valid Pay Amount!");
+      AppToast.error(context, AppStrings.get("valid_pay_amount"));
       return;
     }
-FocusScope.of(context).requestFocus(FocusNode());
+    FocusScope.of(context).requestFocus(FocusNode());
     int adminValue = 0;
 
     if (isAdmin && !adminExists) {
@@ -110,7 +111,7 @@ FocusScope.of(context).requestFocus(FocusNode());
     isAdmin = false;
 
     await _loadMembers();
-    AppToast.success(context, "Member saved!");
+    AppToast.success(context, AppStrings.get("member_saved"));
   }
 
   int? get adminExistsId {
@@ -167,11 +168,11 @@ FocusScope.of(context).requestFocus(FocusNode());
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        title: Text("Members - ${widget.tripName}"),
+        title: Text("${AppStrings.get("members")} - ${widget.tripName}"),
 
         flexibleSpace: Container(
           decoration: const BoxDecoration(
-            gradient: LinearGradient(colors: [Colors.teal, Colors.tealAccent]),
+            gradient: LinearGradient(colors: [Colors.teal, Colors.teal]),
           ),
         ),
       ),
@@ -182,9 +183,8 @@ FocusScope.of(context).requestFocus(FocusNode());
 
           children: [
             /// FORM
-            /// 
+            ///
             Container(
-              
               padding: EdgeInsets.all(18),
 
               decoration: BoxDecoration(
@@ -195,8 +195,8 @@ FocusScope.of(context).requestFocus(FocusNode());
 
               child: Column(
                 children: [
-                     Text(
-                    "Add Members Details",
+                  Text(
+                    AppStrings.get("add_member_details"),
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
@@ -206,7 +206,10 @@ FocusScope.of(context).requestFocus(FocusNode());
                   SizedBox(height: 12),
                   TextField(
                     controller: nameCtrl,
-                    decoration: _inputStyle("Name *", Icons.person),
+                    decoration: _inputStyle(
+                      "${AppStrings.get("name")} *",
+                      Icons.person,
+                    ),
                   ),
 
                   SizedBox(height: 12),
@@ -214,7 +217,10 @@ FocusScope.of(context).requestFocus(FocusNode());
                   TextField(
                     controller: mobileCtrl,
                     keyboardType: TextInputType.phone,
-                    decoration: _inputStyle("Mobile ", Icons.phone),
+                    decoration: _inputStyle(
+                      AppStrings.get("mobile"),
+                      Icons.phone,
+                    ),
                   ),
 
                   SizedBox(height: 12),
@@ -222,7 +228,10 @@ FocusScope.of(context).requestFocus(FocusNode());
                   TextField(
                     controller: emailCtrl,
                     keyboardType: TextInputType.emailAddress,
-                    decoration: _inputStyle("Email", Icons.email),
+                    decoration: _inputStyle(
+                      AppStrings.get("email"),
+                      Icons.email,
+                    ),
                   ),
 
                   SizedBox(height: 12),
@@ -232,7 +241,7 @@ FocusScope.of(context).requestFocus(FocusNode());
                     enabled: editingMemberId == null, // edit time disable
                     keyboardType: TextInputType.number,
                     decoration: _inputStyle(
-                      "Pay Amount *",
+                      "${AppStrings.get("pay_amount")} *",
                       Icons.currency_rupee,
                     ),
                   ),
@@ -252,12 +261,12 @@ FocusScope.of(context).requestFocus(FocusNode());
 
                       Text(
                         adminExists && !isEditingAdmin
-                            ? "Admin already marked"
-                            : "Admin",
+                            ? AppStrings.get("admin_marked")
+                            : AppStrings.get("admin"), // 🔥 FIX
                         style: TextStyle(
                           color: adminExists && !isEditingAdmin
                               ? Colors.red
-                              : Colors.black,
+                              : Theme.of(context).textTheme.bodyMedium?.color,
                         ),
                       ),
                     ],
@@ -274,7 +283,9 @@ FocusScope.of(context).requestFocus(FocusNode());
                       icon: Icon(Icons.save),
 
                       label: Text(
-                        editingMemberId == null ? "Add Member" : "Save Changes",
+                        editingMemberId == null
+                            ? AppStrings.get("add_member")
+                            : "Save Changes",
                       ),
 
                       style: ElevatedButton.styleFrom(
@@ -291,7 +302,7 @@ FocusScope.of(context).requestFocus(FocusNode());
             SizedBox(height: 24),
 
             Text(
-              "All Members",
+              AppStrings.get("all_members"),
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -327,7 +338,7 @@ FocusScope.of(context).requestFocus(FocusNode());
                   ),
 
                   subtitle: Text(
-                    "Mobile: ${m['mobile']} | Pay ₹${m['payAmount']}",
+                    "${AppStrings.get("mobile")}: ${m['mobile']} | ${AppStrings.get("pay")} ₹${m['payAmount']}",
                   ),
                   trailing: PopupMenuButton(
                     itemBuilder: (context) => [
@@ -340,29 +351,29 @@ FocusScope.of(context).requestFocus(FocusNode());
                               color: Theme.of(context).colorScheme.primary,
                             ),
                             SizedBox(width: 8),
-                            Text("Ledger"),
+                            Text(AppStrings.get("ledger")),
                           ],
                         ),
                       ),
 
-                      const PopupMenuItem(
+                      PopupMenuItem(
                         value: "edit",
                         child: Row(
                           children: [
                             Icon(Icons.edit, color: Colors.blue),
                             SizedBox(width: 8),
-                            Text("Edit"),
+                            Text(AppStrings.get("edit")),
                           ],
                         ),
                       ),
 
-                      const PopupMenuItem(
+                      PopupMenuItem(
                         value: "delete",
                         child: Row(
                           children: [
                             Icon(Icons.delete, color: Colors.red),
                             SizedBox(width: 8),
-                            Text("Delete"),
+                            Text(AppStrings.get("delete")),
                           ],
                         ),
                       ),

@@ -4,8 +4,10 @@ import '../utils/app_toast.dart';
 import 'add_member_screen.dart';
 import 'ads/banner_ad_widget.dart';
 import '../utils/app_config.dart';
+import '../utils/app_strings.dart';
 import 'services/purchase_service.dart';
 import 'services/rating_service.dart';
+
 class AddExpenseScreen extends StatefulWidget {
   final int tripId;
   final String tripName;
@@ -64,21 +66,85 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
       adminId = admin['id'];
     });
   }
+
 List<String> suggestions = [
-  // Food
-  "Dinner with friends","Lunch","Breakfast","Tea stall","Snacks","Water bottles","Cold drinks",
+  /// 🍔 FOOD
+  "Breakfast",
+  "Lunch",
+  "Dinner",
+  "Snacks",
+  "Tea / Coffee",
+  "Water bottles",
+  "Cold drinks",
+  "Street food",
+  "Sweets",
+  "Ice cream",
+  "Fruits",
 
-  // Travel
-  "Taxi fare","Petrol pump","Diesel","Auto ride","Bus tickets","Train tickets","Parking",
+  /// 🚗 TRAVEL
+  "Taxi fare",
+  "Auto ride",
+  "Bus tickets",
+  "Train tickets",
+  "Flight tickets",
+  "Petrol",
+  "Diesel",
+  "Toll tax",
+  "Parking",
+  "Bike rent",
+  "Car rent",
 
-  // Stay
-  "Hotel booking","Room rent","Resort stay","Guest house","Check-in payment",
+  /// 🏨 STAY
+  "Hotel booking",
+  "Room rent",
+  "Resort stay",
+  "Guest house",
+  "Check-in payment",
+  "Extra bed",
+  "Room service",
 
-  // Fun
-  "Movie tickets","Party","Club entry","Games","Entry tickets",
+  /// 🎉 FUN / ACTIVITIES
+  "Movie tickets",
+  "Adventure activities",
+  "Boat ride",
+  "Entry tickets",
+  "Theme park",
+  "Guide charges",
+  "Photography",
 
-  // Misc
-  "Shopping","Medical","Grocery","Daily items","Misc expense"
+  /// 🛍️ SHOPPING
+  "Shopping",
+  "Souvenirs",
+  "Clothes",
+  "Local items",
+
+  /// 💊 HEALTH
+  "Medical",
+  "Medicines",
+  "First aid",
+  "Doctor visit",
+
+  /// 🧾 DAILY USE
+  "Grocery",
+  "Daily items",
+  "Toiletries",
+  "Soap",
+  "Toothpaste",
+  "Shampoo",
+  "Tissue paper",
+
+  /// 🕌 RELIGIOUS / SPECIAL
+  "Parshad",
+  "Donation",
+  "Temple / Gurudwara",
+
+  /// 🔌 UTILITIES
+  "Mobile recharge",
+  "Internet / WiFi",
+  "Charging",
+
+  /// ❓ MISC
+  "Misc expense",
 ];
   Future<void> _loadCategories() async {
     await DBHelper.instance.createCategoryTable();
@@ -100,70 +166,66 @@ List<String> suggestions = [
   }
 
   Future<void> _addExpense() async {
-FocusScope.of(context).requestFocus(FocusNode());
-var members = await DBHelper.instance.getAll(
-  'members',
-  where: 'tripId = ?',
-  whereArgs: [widget.tripId],
-);
+    FocusScope.of(context).requestFocus(FocusNode());
+    var members = await DBHelper.instance.getAll(
+      'members',
+      where: 'tripId = ?',
+      whereArgs: [widget.tripId],
+    );
 
-bool hasAdmin = members.any((m) => m['isAdmin'] == 1);
+    bool hasAdmin = members.any((m) => m['isAdmin'] == 1);
 
-if (!hasAdmin) {
+    if (!hasAdmin) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text("Admin Required"),
+          content: Text(
+            "Please mark one member as Admin before adding expense.",
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
 
-  showDialog(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: Text("Admin Required"),
-      content: Text(
-          "Please mark one member as Admin before adding expense."),
-      actions: [
-
-        TextButton(
-          onPressed: () {
-
-            Navigator.pop(context);
-
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => AddMemberScreen(
-                  tripId: widget.tripId,
-                  tripName: widget.tripName,
-                ),
-              ),
-            );
-
-          },
-          child: Text("OK"),
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => AddMemberScreen(
+                      tripId: widget.tripId,
+                      tripName: widget.tripName,
+                    ),
+                  ),
+                );
+              },
+              child: Text("OK"),
+            ),
+          ],
         ),
+      );
 
-      ],
-    ),
-  );
-
-  return;
-}
+      return;
+    }
 
     if (descCtrl.text.isEmpty ||
         amountCtrl.text.isEmpty ||
         selectedCategory == null) {
-      AppToast.error(context, "Please fill all required fields");
+      AppToast.error(context, AppStrings.get("fill_required"));
       return;
     }
 
     if (travelDate == null) {
-      AppToast.error(context, "Please select expense date");
+      AppToast.error(context, AppStrings.get("select_date"));
       return;
     }
 
     if ((double.tryParse(amountCtrl.text) ?? 0) <= 0) {
-      AppToast.error(context, "Amount must be greater than 0");
+      AppToast.error(context, AppStrings.get("amount_positive"));
       return;
     }
 
     if (selectedMembers.isEmpty) {
-      AppToast.error(context, "Please select members");
+      AppToast.error(context, AppStrings.get("select_members_first"));
       return;
     }
 
@@ -186,13 +248,13 @@ if (!hasAdmin) {
     selectedMembers.clear();
     travelDate = null;
 
-   AppToast.success(context, "Expense added successfully!");
+    AppToast.success(context, AppStrings.get("expense_added"));
 
-Future.delayed(const Duration(seconds: 2), () {
-  if (context.mounted) {
-    RatingService.trigger(context);
-  }
-});
+    Future.delayed(const Duration(seconds: 2), () {
+      if (context.mounted) {
+        RatingService.trigger(context);
+      }
+    });
     setState(() {});
   }
 
@@ -214,7 +276,7 @@ Future.delayed(const Duration(seconds: 2), () {
       labelText: label,
       filled: true,
       prefixIcon: Icon(icon, color: Colors.teal),
-fillColor: Theme.of(context).cardColor,
+      fillColor: Theme.of(context).cardColor,
 
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
@@ -223,12 +285,12 @@ fillColor: Theme.of(context).cardColor,
 
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-       borderSide: BorderSide(color: Theme.of(context).dividerColor),
+        borderSide: BorderSide(color: Theme.of(context).dividerColor),
       ),
 
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-       borderSide: BorderSide(color: Colors.teal),
+        borderSide: BorderSide(color: Colors.teal),
       ),
     );
   }
@@ -238,14 +300,12 @@ fillColor: Theme.of(context).cardColor,
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        title: Text("Expense - ${widget.tripName}"),
+        title: Text("${AppStrings.get("expense")} - ${widget.tripName}"),
         flexibleSpace: Container(
-  decoration: const BoxDecoration(
-    gradient: LinearGradient(
-      colors: [Colors.teal, Colors.tealAccent],
-    ),
-  ),
-),
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(colors: [Colors.teal, Colors.teal]),
+          ),
+        ),
       ),
 
       body: ListView(
@@ -264,15 +324,15 @@ fillColor: Theme.of(context).cardColor,
 
             child: Column(
               children: [
-                      Text(
-                    "Add Expense Details",
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.teal,
-                    ),
+                Text(
+                  AppStrings.get("add_expense_details"),
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.teal,
                   ),
-                  SizedBox(height: 12),
+                ),
+                SizedBox(height: 12),
                 Row(
                   children: [
                     Expanded(
@@ -280,7 +340,7 @@ fillColor: Theme.of(context).cardColor,
                         value: selectedCategory,
 
                         decoration: _inputStyle("Category", Icons.category),
-                      
+
                         items: categories
                             .map(
                               (e) => DropdownMenuItem(value: e, child: Text(e)),
@@ -297,7 +357,7 @@ fillColor: Theme.of(context).cardColor,
                     IconButton(
                       icon: Icon(
                         Icons.add_circle,
-                       color: Colors.teal,
+                        color: Colors.teal,
                         size: 30,
                       ),
 
@@ -309,19 +369,19 @@ fillColor: Theme.of(context).cardColor,
 
                           builder: (context) {
                             return AlertDialog(
-                              title: Text("Add Category"),
+                              title: Text(AppStrings.get("add_category")),
 
                               content: TextField(
                                 controller: catCtrl,
                                 decoration: InputDecoration(
-                                  hintText: "Enter category name",
+                                  hintText: AppStrings.get("enter_category"),
                                 ),
                               ),
 
                               actions: [
                                 TextButton(
                                   onPressed: () => Navigator.pop(context),
-                                  child: Text("Cancel"),
+                                  child: Text(AppStrings.get("cancel")),
                                 ),
 
                                 ElevatedButton(
@@ -338,7 +398,7 @@ fillColor: Theme.of(context).cardColor,
                                     }
                                   },
 
-                                  child: Text("Add"),
+                                  child: Text(AppStrings.get("add")),
                                 ),
                               ],
                             );
@@ -352,41 +412,49 @@ fillColor: Theme.of(context).cardColor,
                 SizedBox(height: 12),
 
                 Autocomplete<String>(
-  optionsBuilder: (TextEditingValue textEditingValue) {
-    if (textEditingValue.text.isEmpty) {
-      return const Iterable<String>.empty();
-    }
+                  optionsBuilder: (TextEditingValue textEditingValue) {
+                    if (textEditingValue.text.isEmpty) {
+                      return const Iterable<String>.empty();
+                    }
 
-    return suggestions.where((s) =>
-      s.toLowerCase().contains(textEditingValue.text.toLowerCase())
-    );
-  },
+                    return suggestions.where(
+                      (s) => s.toLowerCase().contains(
+                        textEditingValue.text.toLowerCase(),
+                      ),
+                    );
+                  },
 
-  onSelected: (selection) {
-    descCtrl.text = selection;
-  },
+                  onSelected: (selection) {
+                    descCtrl.text = selection;
+                  },
 
-  fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+                  fieldViewBuilder:
+                      (context, controller, focusNode, onFieldSubmitted) {
+                        // IMPORTANT: sync controller
+                        controller.text = descCtrl.text;
 
-    // IMPORTANT: sync controller
-    controller.text = descCtrl.text;
-
-    return TextField(
-      controller: controller,
-      focusNode: focusNode,
-      decoration: _inputStyle("Description", Icons.description),
-      onChanged: (value) {
-        descCtrl.text = value;
-      },
-    );
-  },
-),
+                        return TextField(
+                          controller: controller,
+                          focusNode: focusNode,
+                          decoration: _inputStyle(
+                            AppStrings.get("description"),
+                            Icons.description,
+                          ),
+                          onChanged: (value) {
+                            descCtrl.text = value;
+                          },
+                        );
+                      },
+                ),
                 SizedBox(height: 12),
 
                 TextField(
                   controller: amountCtrl,
                   keyboardType: TextInputType.number,
-                  decoration: _inputStyle("Amount", Icons.currency_rupee),
+                  decoration: _inputStyle(
+                    AppStrings.get("amount"),
+                    Icons.currency_rupee,
+                  ),
                 ),
 
                 SizedBox(height: 12),
@@ -400,10 +468,9 @@ fillColor: Theme.of(context).cardColor,
 
                     label: Text(
                       travelDate == null
-                          ? "Expense Date"
-                          : travelDate!.toLocal().toString().split(' ')[0],  style: TextStyle(
-                 color: Colors.teal
-              ),
+                          ? AppStrings.get("expense_date")
+                          : travelDate!.toLocal().toString().split(' ')[0],
+                      style: TextStyle(color: Colors.teal),
                     ),
 
                     onPressed: _pickDate,
@@ -424,14 +491,20 @@ fillColor: Theme.of(context).cardColor,
 
                   TextField(
                     controller: fromCtrl,
-                    decoration: _inputStyle("From", Icons.location_on),
+                    decoration: _inputStyle(
+                      AppStrings.get("from"),
+                      Icons.location_on,
+                    ),
                   ),
 
                   SizedBox(height: 12),
 
                   TextField(
                     controller: toCtrl,
-                    decoration: _inputStyle("To", Icons.location_on),
+                    decoration: _inputStyle(
+                      AppStrings.get("to"),
+                      Icons.location_on,
+                    ),
                   ),
                 ],
               ],
@@ -446,7 +519,7 @@ fillColor: Theme.of(context).cardColor,
 
             children: [
               Text(
-                "Select Members",
+                AppStrings.get("select_members"),
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -476,7 +549,7 @@ fillColor: Theme.of(context).cardColor,
                 },
               ),
 
-              Text("Select All"),
+              Text(AppStrings.get("select_all")),
             ],
           ),
 
@@ -489,7 +562,7 @@ fillColor: Theme.of(context).cardColor,
               margin: EdgeInsets.symmetric(vertical: 6),
 
               decoration: BoxDecoration(
-               color: Theme.of(context).cardColor,
+                color: Theme.of(context).cardColor,
                 borderRadius: BorderRadius.circular(14),
                 boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 6)],
               ),
@@ -533,22 +606,22 @@ fillColor: Theme.of(context).cardColor,
 
             icon: Icon(Icons.add),
 
-            label: Text("Add Expense"),
+            label: Text(AppStrings.get("add_expense")),
 
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.teal,
               foregroundColor: Colors.white,
               padding: EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-              ),
+             
             ),
           ),
-           SizedBox(height: 40),
-           /// 🔥 Banner Ad
+          SizedBox(height: 40),
+
+          /// 🔥 Banner Ad
+          ///
           if (AppConfig.enableAds && !PurchaseService.isAdsRemoved)
-  const BannerAdWidget(),
-           SizedBox(height: 40),
+            BannerAdWidget(),
+          SizedBox(height: 40),
         ],
       ),
     );
