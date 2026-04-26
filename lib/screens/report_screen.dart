@@ -589,7 +589,7 @@ class _ReportScreenState extends State<ReportScreen> {
                     /// SELECT ALL
                     CheckboxListTile(
                       value: selectAll,
-                     
+
                       title: Text(AppStrings.get("all_members")),
                       onChanged: (val) {
                         setModalState(() {
@@ -1053,33 +1053,39 @@ class _ReportScreenState extends State<ReportScreen> {
           /// 🔥 TRANSPARENT LOADER
           AnimatedOpacity(
             opacity: isLoading ? 1 : 0,
-            duration: Duration(milliseconds: 250), // 🔥 smooth fade
+            duration: const Duration(milliseconds: 250),
 
             child: IgnorePointer(
-              ignoring: !isLoading, // 👈 clicks disable only when loading
+              ignoring: !isLoading,
 
               child: Container(
-                color: Colors.black.withOpacity(0.1), // 🔥 softer
+                color: Colors.black.withOpacity(0.15),
 
                 child: Center(
                   child: Container(
-                    padding: EdgeInsets.all(20),
+                    padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Theme.of(context).cardColor,
                       borderRadius: BorderRadius.circular(14),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        CircularProgressIndicator(color: Colors.teal),
-                        SizedBox(height: 10),
+                        const CircularProgressIndicator(color: Colors.teal),
+                        const SizedBox(height: 10),
                         Text(
                           "Loading...",
                           style: TextStyle(
-                            color:
-                                Theme.of(context).brightness == Brightness.dark
-                                ? Colors.black
-                                : Colors.black,
+                            color: Theme.of(
+                              context,
+                            ).textTheme.bodyMedium?.color,
                           ),
                         ),
                       ],

@@ -383,6 +383,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             context,
                             userId: widget.userId,
                           );
+                          await _loadBackupInfo(); // 🔥 ADD THIS LINE
 
                           /// Done
                           setState(() {

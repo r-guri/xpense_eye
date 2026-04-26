@@ -126,6 +126,9 @@ class AppStrings {
       "restoring_data": "Restoring data...",
       "completed": "Completed",
       "no_data_backup": "No data available to backup",
+      "home": "Home",
+      "welcome": "Welcome",
+      "settings": "Settings",
     },
 
     'hi': {
@@ -245,6 +248,9 @@ class AppStrings {
       "confirm_restore": "बैकअप रिस्टोर करें?",
       "restore_warning":"आपका मौजूदा सारा डेटा हट जाएगा और बैकअप से नया डेटा आ जाएगा।",
       "no_data_backup": "बैकअप के लिए कोई डेटा उपलब्ध नहीं है",
+      "home": "होम",
+      "welcome": "स्वागत है",
+      "settings": "सेटिंग्स",
     },
 
     'pa': {
@@ -365,6 +371,9 @@ class AppStrings {
       "restore_warning":
           "ਤੁਹਾਡਾ ਸਾਰਾ ਮੌਜੂਦਾ ਡਾਟਾ ਮਿਟ ਜਾਵੇਗਾ ਅਤੇ ਬੈਕਅਪ ਤੋਂ ਨਵਾਂ ਡਾਟਾ ਆ ਜਾਵੇਗਾ।",
       "no_data_backup": "ਬੈਕਅਪ ਲਈ ਕੋਈ ਡਾਟਾ ਮੌਜੂਦ ਨਹੀਂ ਹੈ",
+      "home": "ਹੋਮ",
+      "welcome": "ਜੀ ਆਇਆਂ ਨੂੰ",
+      "settings": "ਸੈਟਿੰਗਜ਼",
     },
   };
 

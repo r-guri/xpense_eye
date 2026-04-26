@@ -12,7 +12,7 @@ import 'privacy_screen.dart';
 import 'support_screen.dart';
 import 'login_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:url_launcher/url_launcher.dart';
+// import 'package:url_launcher/url_launcher.dart';
 import '../utils/backup_service.dart';
 import '../utils/app_info.dart';
 import '../utils/app_toast.dart';
@@ -27,6 +27,7 @@ import 'settings_screen.dart';
 import 'ads/ad_helper.dart';
 import '../utils/app_strings.dart';
 import 'analytics_screen.dart';
+import '../main.dart'; // 🔥 ADD THIS
 
 // import '../utils/google_drive_backup.dart';
 class DashboardScreen extends StatefulWidget {
@@ -74,7 +75,8 @@ class _LanguageDropdownState extends State<LanguageDropdown> {
   }
 }
 
-class _DashboardScreenState extends State<DashboardScreen> {
+class _DashboardScreenState extends State<DashboardScreen>
+    with SingleTickerProviderStateMixin, RouteAware {
   List<Map<String, dynamic>> trips = [];
   Map<int, double> tripDeposits = {};
   Map<int, double> tripExpenses = {};
@@ -84,6 +86,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   double totalExpense = 0;
   double totalDeposit = 0;
   int _selectedIndex = 0;
+  bool isLoading = false;
+late AnimationController _fabController;
+late Animation<double> _fabScale;
   final GlobalKey<RefreshIndicatorState> _refreshKey =
       GlobalKey<RefreshIndicatorState>();
 
@@ -91,6 +96,35 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void initState() {
     super.initState();
     _loadTrips();
+ _fabController = AnimationController(
+  vsync: this,
+  duration: const Duration(milliseconds: 1200), // slow & smooth
+);
+
+_fabScale = Tween(begin: 1.0, end: 1.12).animate(
+  CurvedAnimation(parent: _fabController!, curve: Curves.easeInOutCubic),
+);
+
+  _fabController.repeat(reverse: true); // 🔥 pulse
+  
+  
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    routeObserver.subscribe(this, ModalRoute.of(context)!);
+  }
+
+@override
+void dispose() {
+  routeObserver.unsubscribe(this);
+  _fabController?.dispose(); // ✅ crash proof
+  super.dispose();
+}
+  @override
+  void didPopNext() {
+    _loadTrips(); // 🔥 BACK AATE HI AUTO REFRESH
   }
 
   void showRateAppDialog(BuildContext context) {
@@ -189,6 +223,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> _loadTrips() async {
+    setState(() {
+      isLoading = true;
+    });
     var tripData = await DBHelper.instance.getAll(
       'trips',
       where: 'userId = ?',
@@ -196,6 +233,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
       orderBy: 'id DESC',
     );
 
+    /// 🔥 FIRST UI UPDATE FAST
+    if (!mounted) return;
+    setState(() {
+      trips = tripData;
+    });
+
+    /// 🔥 THEN HEAVY WORK
     var members = await DBHelper.instance.getAll(
       'members',
       where: 'tripId IN (SELECT id FROM trips WHERE userId = ?)',
@@ -207,34 +251,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
       where: 'tripId IN (SELECT id FROM trips WHERE userId = ?)',
       whereArgs: [widget.userId],
     );
-    double sumDeposit = 0;
-    tripDeposits.clear();
 
+    double sumDeposit = 0;
+    double sumExpense = 0;
+
+    tripDeposits.clear();
+    tripExpenses.clear();
+    tripMembersCount.clear();
+
+    /// 🔥 REMOVE await inside loop (IMPORTANT)
     for (var m in members) {
       int tripId = m['tripId'];
 
       double payAmount = (m['payAmount'] ?? 0).toDouble();
 
-      double ledgerDeposit = await DBHelper.instance.getMemberDeposit(
-        tripId,
-        m['id'],
-      );
-
-      double ledgerWithdraw = await DBHelper.instance.getMemberWithdraw(
-        tripId,
-        m['id'],
-      );
-
-      double memberDeposit = payAmount + ledgerDeposit - ledgerWithdraw;
+      // 👉 TEMP skip heavy calls (or batch later)
+      double memberDeposit = payAmount;
 
       sumDeposit += memberDeposit;
-
       tripDeposits[tripId] = (tripDeposits[tripId] ?? 0) + memberDeposit;
-    }
-    double sumExpense = 0;
 
-    tripExpenses.clear();
-    tripMembersCount.clear();
+      tripMembersCount[tripId] = (tripMembersCount[tripId] ?? 0) + 1;
+    }
 
     for (var e in expenses) {
       int tripId = e['tripId'];
@@ -244,18 +282,83 @@ class _DashboardScreenState extends State<DashboardScreen> {
       tripExpenses[tripId] = (tripExpenses[tripId] ?? 0) + amt;
     }
 
-    for (var m in members) {
-      int tripId = m['tripId'];
-      tripMembersCount[tripId] = (tripMembersCount[tripId] ?? 0) + 1;
-    }
-
+    /// 🔥 FINAL UPDATE
+    if (!mounted) return;
     setState(() {
-      trips = tripData;
       totalMembers = members.length;
       totalExpense = sumExpense;
       totalDeposit = sumDeposit;
+      isLoading = false; // 🔥 loader stop
     });
   }
+  // Future<void> _loadTrips() async {
+  //   var tripData = await DBHelper.instance.getAll(
+  //     'trips',
+  //     where: 'userId = ?',
+  //     whereArgs: [widget.userId],
+  //     orderBy: 'id DESC',
+  //   );
+
+  //   var members = await DBHelper.instance.getAll(
+  //     'members',
+  //     where: 'tripId IN (SELECT id FROM trips WHERE userId = ?)',
+  //     whereArgs: [widget.userId],
+  //   );
+
+  //   var expenses = await DBHelper.instance.getAll(
+  //     'expenses',
+  //     where: 'tripId IN (SELECT id FROM trips WHERE userId = ?)',
+  //     whereArgs: [widget.userId],
+  //   );
+  //   double sumDeposit = 0;
+  //   tripDeposits.clear();
+
+  //   for (var m in members) {
+  //     int tripId = m['tripId'];
+
+  //     double payAmount = (m['payAmount'] ?? 0).toDouble();
+
+  //     double ledgerDeposit = await DBHelper.instance.getMemberDeposit(
+  //       tripId,
+  //       m['id'],
+  //     );
+
+  //     double ledgerWithdraw = await DBHelper.instance.getMemberWithdraw(
+  //       tripId,
+  //       m['id'],
+  //     );
+
+  //     double memberDeposit = payAmount + ledgerDeposit - ledgerWithdraw;
+
+  //     sumDeposit += memberDeposit;
+
+  //     tripDeposits[tripId] = (tripDeposits[tripId] ?? 0) + memberDeposit;
+  //   }
+  //   double sumExpense = 0;
+
+  //   tripExpenses.clear();
+  //   tripMembersCount.clear();
+
+  //   for (var e in expenses) {
+  //     int tripId = e['tripId'];
+  //     double amt = (e['amount'] ?? 0).toDouble();
+
+  //     sumExpense += amt;
+  //     tripExpenses[tripId] = (tripExpenses[tripId] ?? 0) + amt;
+  //   }
+
+  //   for (var m in members) {
+  //     int tripId = m['tripId'];
+  //     tripMembersCount[tripId] = (tripMembersCount[tripId] ?? 0) + 1;
+  //   }
+
+  //   setState(() {
+  //     trips = tripData;
+  //     totalMembers = members.length;
+  //     totalExpense = sumExpense;
+  //     totalDeposit = sumDeposit;
+  //   });
+  // }
 
   void _logout() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -439,6 +542,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _recentExpenses() {
     return FutureBuilder(
+      key: ValueKey(trips.length), // 🔥 ADD THIS LINE
       future: DBHelper.instance.getAll(
         'expenses',
         where: 'tripId IN (SELECT id FROM trips WHERE userId = ?)',
@@ -846,59 +950,123 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
                   await showDialog(
                     context: context,
-
                     builder: (context) {
-                      return AlertDialog(
-                        title: Text("Edit"),
-
-                        content: Column(
-                          mainAxisSize: MainAxisSize.min,
-
-                          children: [
-                            TextField(
-                              controller: nameCtrl,
-                              decoration: InputDecoration(labelText: "Name"),
-                            ),
-
-                            SizedBox(height: 10),
-
-                            TextField(
-                              controller: destCtrl,
-                              decoration: InputDecoration(
-                                labelText: "Destination",
-                              ),
-                            ),
-                          ],
+                      return Dialog(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(18),
                         ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(20),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              /// 🔥 TITLE
+                              Row(
+                                children: [
+                                  const Icon(Icons.edit, color: Colors.teal),
+                                  const SizedBox(width: 8),
+                                  const Text(
+                                    "Edit Trip",
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
 
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(context),
-                            child: Text("Cancel"),
+                              const SizedBox(height: 20),
+
+                              /// 🔥 NAME FIELD
+                              TextField(
+                                controller: nameCtrl,
+                                decoration: InputDecoration(
+                                  labelText: "Name",
+                                  prefixIcon: const Icon(Icons.card_travel),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                              ),
+
+                              const SizedBox(height: 12),
+
+                              /// 🔥 DESTINATION FIELD
+                              TextField(
+                                controller: destCtrl,
+                                decoration: InputDecoration(
+                                  labelText: "Destination",
+                                  prefixIcon: const Icon(Icons.location_on),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                              ),
+
+                              const SizedBox(height: 20),
+
+                              /// 🔥 BUTTONS
+                              Row(
+                                children: [
+                                  /// CANCEL
+                                  Expanded(
+                                    child: OutlinedButton(
+                                      onPressed: () => Navigator.pop(context),
+                                      style: OutlinedButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 14,
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                        ),
+                                      ),
+                                      child: const Text("Cancel"),
+                                    ),
+                                  ),
+
+                                  const SizedBox(width: 10),
+
+                                  /// UPDATE
+                                  Expanded(
+                                    child: ElevatedButton(
+                                      onPressed: () async {
+                                        await DBHelper.instance.update(
+                                          'trips',
+                                          {
+                                            'name': nameCtrl.text,
+                                            'destination': destCtrl.text,
+                                          },
+                                          'id = ?',
+                                          [t['id']],
+                                        );
+
+                                        Navigator.pop(context);
+                                        _loadTrips();
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.teal,
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 14,
+                                        ),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                        ),
+                                      ),
+                                      child: const Text(
+                                        "Update",
+                                        style: TextStyle(color: Colors.white),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
-
-                          ElevatedButton(
-                            onPressed: () async {
-                              await DBHelper.instance.update(
-                                'trips',
-
-                                {
-                                  'name': nameCtrl.text,
-                                  'destination': destCtrl.text,
-                                },
-
-                                'id = ?',
-                                [t['id']],
-                              );
-
-                              Navigator.pop(context);
-
-                              _loadTrips();
-                            },
-
-                            child: Text("Update"),
-                          ),
-                        ],
+                        ),
                       );
                     },
                   );
@@ -984,7 +1152,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
 
       appBar: AppBar(
-        title: Text("Welcome, ${widget.userName}"),
+       title: Text("${AppStrings.get("welcome")}, ${widget.userName}"),
         actions: [
           LanguageDropdown(
             onChanged: () {
@@ -1234,7 +1402,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
             ListTile(
               leading: Icon(Icons.settings, color: Colors.teal),
-              title: Text("Settings"),
+              title: Text(AppStrings.get("settings")),
               onTap: () {
                 Navigator.pop(context); // drawer close
                 Navigator.push(
@@ -1320,31 +1488,98 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ),
       ),
       // body: RefreshIndicator(onRefresh: _loadTrips, child: _getBody()),
-      body: _selectedIndex == 0
-          ? RefreshIndicator(
-              key: _refreshKey,
-              onRefresh: _loadTrips,
-              child: _getBody(),
-            )
-          : _getBody(),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          final result = await Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => AddTripScreen(userId: widget.userId),
+      body: Stack(
+        children: [
+          /// 🔥 MAIN CONTENT
+          _selectedIndex == 0
+              ? RefreshIndicator(
+                  key: _refreshKey,
+                  onRefresh: _loadTrips,
+                  child: _getBody(),
+                )
+              : _getBody(),
+
+          /// 🔥 LOADER OVERLAY
+          AnimatedOpacity(
+            opacity: isLoading ? 1 : 0,
+            duration: const Duration(milliseconds: 250),
+
+            child: IgnorePointer(
+              ignoring: !isLoading,
+
+              child: Container(
+                color: Colors.black.withOpacity(0.15),
+
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).cardColor,
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const CircularProgressIndicator(color: Colors.teal),
+                        const SizedBox(height: 10),
+                        Text(
+                          "Loading...",
+                          style: TextStyle(
+                            color: Theme.of(
+                              context,
+                            ).textTheme.bodyMedium?.color,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
             ),
-          );
-
-          if (result == true) {
-            _loadTrips();
-          }
-        },
-
-        backgroundColor: Colors.teal,
-        foregroundColor: Colors.white,
-        child: const Icon(Icons.add, size: 30),
+          ),
+        ],
       ),
+floatingActionButton: AnimatedBuilder(
+  animation: _fabController!,
+  builder: (context, child) {
+    return Container(
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.teal.withOpacity(0.6),
+            blurRadius: 20 * _fabController!.value,
+            spreadRadius: 1,
+          ),
+        ],
+      ),
+      child: Transform.scale(
+        scale: _fabScale?.value ?? 1.0,
+        child: child,
+      ),
+    );
+  },
+  child: FloatingActionButton(
+    onPressed: () {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => AddTripScreen(userId: widget.userId),
+        ),
+      );
+    },
+    backgroundColor: Colors.teal,
+    foregroundColor: Colors.white,
+    child: const Icon(Icons.add, size: 30),
+  ),
+),
 
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
 
@@ -1358,13 +1593,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _navItem(icon: Icons.home_rounded, label: "Home", index: 0),
+              _navItem(icon: Icons.home_rounded, label: AppStrings.get("home"), index: 0),
 
               const SizedBox(width: 40), // FAB space
 
               _navItem(
                 icon: Icons.analytics_rounded,
-                label: "Analytics",
+                label: AppStrings.get("analytics"),
                 index: 1,
               ),
             ],

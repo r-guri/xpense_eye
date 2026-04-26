@@ -24,6 +24,7 @@ class _AddTripScreenState extends State<AddTripScreen> {
   bool _isLoading = false;
 
   Future<void> _pickDate(bool isStart) async {
+      FocusScope.of(context).requestFocus(FocusNode());
     DateTime? picked = await showDatePicker(
       context: context,
       initialDate: DateTime.now(),
@@ -42,6 +43,7 @@ class _AddTripScreenState extends State<AddTripScreen> {
   }
 
   Future<void> _saveTrip() async {
+      FocusScope.of(context).requestFocus(FocusNode());
     if (nameCtrl.text.isEmpty ||
         destCtrl.text.isEmpty ||
         startDate == null ||
@@ -107,12 +109,12 @@ class _AddTripScreenState extends State<AddTripScreen> {
       appBar: AppBar(
         title: Text(AppStrings.get("create_trip")),
 
-       flexibleSpace: Container(
+        flexibleSpace: Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
-             colors: Theme.of(context).brightness == Brightness.dark
-    ? [Colors.grey.shade900, Colors.grey.shade900]
-    : [Colors.teal, Colors.teal],
+              colors: Theme.of(context).brightness == Brightness.dark
+                  ? [Colors.grey.shade900, Colors.grey.shade900]
+                  : [Colors.teal, Colors.teal],
             ),
           ),
         ),

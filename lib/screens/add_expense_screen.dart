@@ -82,9 +82,8 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     "Ice cream",
     "Fruits",
     "Jeep"
-
-    /// 🚗 TRAVEL
-    "Taxi fare",
+        /// 🚗 TRAVEL
+        "Taxi fare",
     "Auto ride",
     "Bus tickets",
     "Train tickets",
@@ -251,7 +250,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     travelDate = null;
     isChanged = true;
     AppToast.success(context, AppStrings.get("expense_added"));
-    
+
     Future.delayed(const Duration(seconds: 2), () {
       if (context.mounted) {
         RatingService.trigger(context);
@@ -264,6 +263,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   }
 
   Future<void> _pickDate() async {
+    FocusScope.of(context).requestFocus(FocusNode());
     DateTime? picked = await showDatePicker(
       context: context,
       initialDate: DateTime.now(),
@@ -301,348 +301,438 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   }
 
   @override
-Widget build(BuildContext context) {
-  return WillPopScope(
-    onWillPop: () async {
-      Navigator.pop(context, isChanged); // 🔥 result send
-      return false;
-    },
-    child:  Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: AppBar(
-        leading: BackButton(
-    onPressed: () {
-      Navigator.pop(context, isChanged);
-    },
-  ),
-        title: Text("${AppStrings.get("expense")} - ${widget.tripName}"),
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-             colors: Theme.of(context).brightness == Brightness.dark
-    ? [Colors.grey.shade900, Colors.grey.shade900]
-    : [Colors.teal, Colors.teal],
+  Widget build(BuildContext context) {
+    return WillPopScope(
+      onWillPop: () async {
+        Navigator.pop(context, isChanged); // 🔥 result send
+        return false;
+      },
+      child: Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        appBar: AppBar(
+          leading: BackButton(
+            onPressed: () {
+              Navigator.pop(context, isChanged);
+            },
+          ),
+          title: Text("${AppStrings.get("expense")} - ${widget.tripName}"),
+          flexibleSpace: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: Theme.of(context).brightness == Brightness.dark
+                    ? [Colors.grey.shade900, Colors.grey.shade900]
+                    : [Colors.teal, Colors.teal],
+              ),
             ),
           ),
         ),
-      ),
 
-      body: ListView(
-        padding: EdgeInsets.all(16),
+        body: ListView(
+          padding: EdgeInsets.all(16),
 
-        children: [
-          /// FORM
-          Container(
-            padding: EdgeInsets.all(18),
+          children: [
+            /// FORM
+            Container(
+              padding: EdgeInsets.all(18),
 
-            decoration: BoxDecoration(
-              color: Theme.of(context).cardColor,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 8)],
+              decoration: BoxDecoration(
+                color: Theme.of(context).cardColor,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 8)],
+              ),
+
+              child: Column(
+                children: [
+                  Text(
+                    AppStrings.get("add_expense_details"),
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.teal,
+                    ),
+                  ),
+                  SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: DropdownButtonFormField<String>(
+                          value: selectedCategory,
+
+                          decoration: _inputStyle("Category", Icons.category),
+
+                          items: categories
+                              .map(
+                                (e) =>
+                                    DropdownMenuItem(value: e, child: Text(e)),
+                              )
+                              .toList(),
+
+                          onChanged: (val) =>
+                              setState(() => selectedCategory = val),
+                        ),
+                      ),
+
+                      SizedBox(width: 10),
+
+                      IconButton(
+                        icon: Icon(
+                          Icons.add_circle,
+                          color: Colors.teal,
+                          size: 30,
+                        ),
+
+                        onPressed: () async {
+                          TextEditingController catCtrl =
+                              TextEditingController();
+
+                          await showDialog(
+                            context: context,
+                            builder: (context) {
+                              return Dialog(
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(18),
+                                ),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(20),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      /// 🔥 TITLE
+                                      Row(
+                                        children: [
+                                          const Icon(
+                                            Icons.category,
+                                            color: Colors.teal,
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            AppStrings.get("add_category"),
+                                            style: const TextStyle(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+
+                                      const SizedBox(height: 20),
+
+                                      /// 🔥 INPUT FIELD
+                                      TextField(
+                                        controller: catCtrl,
+                                        decoration: InputDecoration(
+                                          hintText: AppStrings.get(
+                                            "enter_category",
+                                          ),
+                                          prefixIcon: const Icon(Icons.label),
+                                          border: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+
+                                      const SizedBox(height: 20),
+
+                                      /// 🔥 BUTTONS
+                                      Row(
+                                        children: [
+                                          /// CANCEL
+                                          Expanded(
+                                            child: OutlinedButton(
+                                              onPressed: () =>
+                                                  Navigator.pop(context),
+                                              style: OutlinedButton.styleFrom(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      vertical: 14,
+                                                    ),
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(12),
+                                                ),
+                                              ),
+                                              child: Text(
+                                                AppStrings.get("cancel"),
+                                              ),
+                                            ),
+                                          ),
+
+                                          const SizedBox(width: 10),
+
+                                          /// ADD BUTTON
+                                          Expanded(
+                                            child: ElevatedButton(
+                                              onPressed: () async {
+                                                if (catCtrl.text
+                                                    .trim()
+                                                    .isEmpty) {
+                                                  AppToast.error(
+                                                    context,
+                                                    AppStrings.get(
+                                                      "enter_category",
+                                                    ),
+                                                  );
+                                                  return;
+                                                }
+
+                                                await DBHelper.instance
+                                                    .addCategory(
+                                                      widget.tripId,
+                                                      catCtrl.text.trim(),
+                                                    );
+
+                                                Navigator.pop(context);
+                                                _loadCategories();
+                                              },
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: Colors.teal,
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      vertical: 14,
+                                                    ),
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(12),
+                                                ),
+                                              ),
+                                              child: Text(
+                                                AppStrings.get("add"),
+                                                style: const TextStyle(
+                                                  color: Colors.white,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+
+                  SizedBox(height: 12),
+
+                  Autocomplete<String>(
+                    optionsBuilder: (TextEditingValue textEditingValue) {
+                      if (textEditingValue.text.isEmpty) {
+                        return const Iterable<String>.empty();
+                      }
+
+                      return suggestions.where(
+                        (s) => s.toLowerCase().contains(
+                          textEditingValue.text.toLowerCase(),
+                        ),
+                      );
+                    },
+
+                    onSelected: (selection) {
+                      descCtrl.text = selection;
+                    },
+
+                    fieldViewBuilder:
+                        (context, controller, focusNode, onFieldSubmitted) {
+                          // IMPORTANT: sync controller
+                          controller.text = descCtrl.text;
+
+                          return TextField(
+                            controller: controller,
+                            focusNode: focusNode,
+                            decoration: _inputStyle(
+                              AppStrings.get("description"),
+                              Icons.description,
+                            ),
+                            onChanged: (value) {
+                              descCtrl.text = value;
+                            },
+                          );
+                        },
+                  ),
+                  SizedBox(height: 12),
+
+                  TextField(
+                    controller: amountCtrl,
+                    keyboardType: TextInputType.number,
+                    decoration: _inputStyle(
+                      AppStrings.get("amount"),
+                      Icons.currency_rupee,
+                    ),
+                  ),
+
+                  SizedBox(height: 12),
+
+                  /// EXPENSE DATE (FOR ALL CATEGORIES)
+                  SizedBox(
+                    width: double.infinity,
+
+                    child: OutlinedButton.icon(
+                      icon: Icon(Icons.date_range, color: Colors.teal),
+
+                      label: Text(
+                        travelDate == null
+                            ? AppStrings.get("expense_date")
+                            : travelDate!.toLocal().toString().split(' ')[0],
+                        style: TextStyle(color: Colors.teal),
+                      ),
+
+                      onPressed: _pickDate,
+
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(color: Colors.teal),
+                        padding: EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  /// TRAVEL EXTRA FIELDS
+                  if (selectedCategory == "Travel") ...[
+                    SizedBox(height: 12),
+
+                    TextField(
+                      controller: fromCtrl,
+                      decoration: _inputStyle(
+                        AppStrings.get("from"),
+                        Icons.location_on,
+                      ),
+                    ),
+
+                    SizedBox(height: 12),
+
+                    TextField(
+                      controller: toCtrl,
+                      decoration: _inputStyle(
+                        AppStrings.get("to"),
+                        Icons.location_on,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
             ),
 
-            child: Column(
+            SizedBox(height: 24),
+
+            /// MEMBERS TITLE
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+
               children: [
                 Text(
-                  AppStrings.get("add_expense_details"),
+                  AppStrings.get("select_members"),
                   style: TextStyle(
-                    fontSize: 20,
+                    fontSize: 18,
                     fontWeight: FontWeight.bold,
                     color: Colors.teal,
                   ),
                 ),
-                SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: DropdownButtonFormField<String>(
-                        value: selectedCategory,
 
-                        decoration: _inputStyle("Category", Icons.category),
-
-                        items: categories
-                            .map(
-                              (e) => DropdownMenuItem(value: e, child: Text(e)),
-                            )
-                            .toList(),
-
-                        onChanged: (val) =>
-                            setState(() => selectedCategory = val),
-                      ),
-                    ),
-
-                    SizedBox(width: 10),
-
-                    IconButton(
-                      icon: Icon(
-                        Icons.add_circle,
-                        color: Colors.teal,
-                        size: 30,
-                      ),
-
-                      onPressed: () async {
-                        TextEditingController catCtrl = TextEditingController();
-
-                        await showDialog(
-                          context: context,
-
-                          builder: (context) {
-                            return AlertDialog(
-                              title: Text(AppStrings.get("add_category")),
-
-                              content: TextField(
-                                controller: catCtrl,
-                                decoration: InputDecoration(
-                                  hintText: AppStrings.get("enter_category"),
-                                ),
-                              ),
-
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.pop(context),
-                                  child: Text(AppStrings.get("cancel")),
-                                ),
-
-                                ElevatedButton(
-                                  onPressed: () async {
-                                    if (catCtrl.text.isNotEmpty) {
-                                      await DBHelper.instance.addCategory(
-                                        widget.tripId,
-                                        catCtrl.text,
-                                      );
-
-                                      Navigator.pop(context);
-
-                                      _loadCategories();
-                                    }
-                                  },
-
-                                  child: Text(AppStrings.get("add")),
-                                ),
-                              ],
-                            );
-                          },
-                        );
-                      },
-                    ),
-                  ],
+                Text(
+                  "${selectedMembers.length}/${members.length}",
+                  style: TextStyle(color: Colors.grey),
                 ),
-
-                SizedBox(height: 12),
-
-                Autocomplete<String>(
-                  optionsBuilder: (TextEditingValue textEditingValue) {
-                    if (textEditingValue.text.isEmpty) {
-                      return const Iterable<String>.empty();
-                    }
-
-                    return suggestions.where(
-                      (s) => s.toLowerCase().contains(
-                        textEditingValue.text.toLowerCase(),
-                      ),
-                    );
-                  },
-
-                  onSelected: (selection) {
-                    descCtrl.text = selection;
-                  },
-
-                  fieldViewBuilder:
-                      (context, controller, focusNode, onFieldSubmitted) {
-                        // IMPORTANT: sync controller
-                        controller.text = descCtrl.text;
-
-                        return TextField(
-                          controller: controller,
-                          focusNode: focusNode,
-                          decoration: _inputStyle(
-                            AppStrings.get("description"),
-                            Icons.description,
-                          ),
-                          onChanged: (value) {
-                            descCtrl.text = value;
-                          },
-                        );
-                      },
-                ),
-                SizedBox(height: 12),
-
-                TextField(
-                  controller: amountCtrl,
-                  keyboardType: TextInputType.number,
-                  decoration: _inputStyle(
-                    AppStrings.get("amount"),
-                    Icons.currency_rupee,
-                  ),
-                ),
-
-                SizedBox(height: 12),
-
-                /// EXPENSE DATE (FOR ALL CATEGORIES)
-                SizedBox(
-                  width: double.infinity,
-
-                  child: OutlinedButton.icon(
-                    icon: Icon(Icons.date_range, color: Colors.teal),
-
-                    label: Text(
-                      travelDate == null
-                          ? AppStrings.get("expense_date")
-                          : travelDate!.toLocal().toString().split(' ')[0],
-                      style: TextStyle(color: Colors.teal),
-                    ),
-
-                    onPressed: _pickDate,
-
-                    style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: Colors.teal),
-                      padding: EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                  ),
-                ),
-
-                /// TRAVEL EXTRA FIELDS
-                if (selectedCategory == "Travel") ...[
-                  SizedBox(height: 12),
-
-                  TextField(
-                    controller: fromCtrl,
-                    decoration: _inputStyle(
-                      AppStrings.get("from"),
-                      Icons.location_on,
-                    ),
-                  ),
-
-                  SizedBox(height: 12),
-
-                  TextField(
-                    controller: toCtrl,
-                    decoration: _inputStyle(
-                      AppStrings.get("to"),
-                      Icons.location_on,
-                    ),
-                  ),
-                ],
               ],
             ),
-          ),
 
-          SizedBox(height: 24),
+            Row(
+              children: [
+                Checkbox(
+                  value: selectAll,
+                  onChanged: (val) {
+                    setState(() {
+                      selectAll = val ?? false;
 
-          /// MEMBERS TITLE
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-
-            children: [
-              Text(
-                AppStrings.get("select_members"),
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.teal,
-                ),
-              ),
-
-              Text(
-                "${selectedMembers.length}/${members.length}",
-                style: TextStyle(color: Colors.grey),
-              ),
-            ],
-          ),
-
-          Row(
-            children: [
-              Checkbox(
-                value: selectAll,
-                onChanged: (val) {
-                  setState(() {
-                    selectAll = val ?? false;
-
-                    selectedMembers = selectAll
-                        ? members.map((m) => m['id'] as int).toList()
-                        : [];
-                  });
-                },
-              ),
-
-              Text(AppStrings.get("select_all")),
-            ],
-          ),
-
-          SizedBox(height: 6),
-
-          ...members.map((m) {
-            bool selected = selectedMembers.contains(m['id']);
-
-            return Container(
-              margin: EdgeInsets.symmetric(vertical: 6),
-
-              decoration: BoxDecoration(
-                color: Theme.of(context).cardColor,
-                borderRadius: BorderRadius.circular(14),
-                boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 6)],
-              ),
-
-              child: CheckboxListTile(
-                value: selected,
-
-                secondary: CircleAvatar(
-                  backgroundColor: Colors.teal.shade100,
-                  child: Icon(Icons.person, color: Colors.teal),
+                      selectedMembers = selectAll
+                          ? members.map((m) => m['id'] as int).toList()
+                          : [];
+                    });
+                  },
                 ),
 
-                title: Text(
-                  m['name'],
-                  style: TextStyle(fontWeight: FontWeight.w600),
-                ),
-
-                subtitle: Text(
-                  "Mobile: ${m['mobile']} | Pay ₹${m['payAmount']}",
-                ),
-
-                onChanged: (val) {
-                  setState(() {
-                    if (val == true) {
-                      selectedMembers.add(m['id']);
-                    } else {
-                      selectedMembers.remove(m['id']);
-                    }
-
-                    selectAll = selectedMembers.length == members.length;
-                  });
-                },
-              ),
-            );
-          }),
-
-          SizedBox(height: 20),
-
-          ElevatedButton.icon(
-            onPressed: _addExpense,
-
-            icon: Icon(Icons.add),
-
-            label: Text(AppStrings.get("add_expense")),
-
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.teal,
-              foregroundColor: Colors.white,
-              padding: EdgeInsets.symmetric(vertical: 16),
+                Text(AppStrings.get("select_all")),
+              ],
             ),
-          ),
-          SizedBox(height: 40),
 
-          /// 🔥 Banner Ad
-          ///
-          if (AppConfig.enableAds && !PurchaseService.isAdsRemoved)
-            BannerAdWidget(),
-          SizedBox(height: 40),
-        ],
+            SizedBox(height: 6),
+
+            ...members.map((m) {
+              bool selected = selectedMembers.contains(m['id']);
+
+              return Container(
+                margin: EdgeInsets.symmetric(vertical: 6),
+
+                decoration: BoxDecoration(
+                  color: Theme.of(context).cardColor,
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 6)],
+                ),
+
+                child: CheckboxListTile(
+                  value: selected,
+
+                  secondary: CircleAvatar(
+                    backgroundColor: Colors.teal.shade100,
+                    child: Icon(Icons.person, color: Colors.teal),
+                  ),
+
+                  title: Text(
+                    m['name'],
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+
+                  subtitle: Text(
+                    "Mobile: ${m['mobile']} | Pay ₹${m['payAmount']}",
+                  ),
+
+                  onChanged: (val) {
+                    setState(() {
+                      if (val == true) {
+                        selectedMembers.add(m['id']);
+                      } else {
+                        selectedMembers.remove(m['id']);
+                      }
+
+                      selectAll = selectedMembers.length == members.length;
+                    });
+                  },
+                ),
+              );
+            }),
+
+            SizedBox(height: 20),
+
+            ElevatedButton.icon(
+              onPressed: _addExpense,
+
+              icon: Icon(Icons.add),
+
+              label: Text(AppStrings.get("add_expense")),
+
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.teal,
+                foregroundColor: Colors.white,
+                padding: EdgeInsets.symmetric(vertical: 16),
+              ),
+            ),
+            SizedBox(height: 40),
+
+            /// 🔥 Banner Ad
+            ///
+            if (AppConfig.enableAds && !PurchaseService.isAdsRemoved)
+              BannerAdWidget(),
+            SizedBox(height: 40),
+          ],
+        ),
       ),
-    ),
-  );
+    );
   }
 }

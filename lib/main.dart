@@ -14,7 +14,8 @@ import 'utils/user_helper.dart';
 /// 🔥 BACKUP IMPORT
 import 'screens/services/backup_prefs.dart';
 import 'screens/services/google_drive_service.dart';
-
+final RouteObserver<ModalRoute<void>> routeObserver =
+    RouteObserver<ModalRoute<void>>();
 /// 🔥 THEME CONTROLLER
 ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.system);
 
@@ -99,6 +100,7 @@ class _TourKhataAppState extends State<TourKhataApp> {
       builder: (context, ThemeMode currentMode, _) {
         return MaterialApp(
           navigatorKey: navigatorKey,
+          navigatorObservers: [routeObserver],
           debugShowCheckedModeBanner: false,
           title: AppInfo.appName,
 
