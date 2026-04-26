@@ -92,6 +92,15 @@ class _MemberLedgerScreenState extends State<MemberLedgerScreen> {
       appBar: AppBar(
         title: Text("${widget.memberName} ${AppStrings.get("ledger")}"),
         backgroundColor: Colors.teal,
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+             colors: Theme.of(context).brightness == Brightness.dark
+    ? [Colors.grey.shade900, Colors.grey.shade900]
+    : [Colors.teal, Colors.teal],
+            ),
+          ),
+        ),
       ),
 
       body: RefreshIndicator(

@@ -4,7 +4,7 @@ import '../db_helper.dart';
 import '../utils/app_toast.dart';
 import 'ads/banner_ad_widget.dart';
 import '../utils/app_config.dart';
-import '../utils/app_strings.dart';
+// import '../utils/app_strings.dart';
 import 'services/purchase_service.dart';
 
 class AddTripScreen extends StatefulWidget {
@@ -107,10 +107,12 @@ class _AddTripScreenState extends State<AddTripScreen> {
       appBar: AppBar(
         title: Text(AppStrings.get("create_trip")),
 
-        flexibleSpace: Container(
+       flexibleSpace: Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [Colors.teal, Colors.teal],
+             colors: Theme.of(context).brightness == Brightness.dark
+    ? [Colors.grey.shade900, Colors.grey.shade900]
+    : [Colors.teal, Colors.teal],
             ),
           ),
         ),

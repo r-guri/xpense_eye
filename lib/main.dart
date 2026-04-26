@@ -9,65 +9,133 @@ import 'screens/ads/ad_helper.dart';
 import 'screens/services/purchase_service.dart';
 import 'utils/app_config.dart';
 import 'utils/app_strings.dart';
+import 'utils/user_helper.dart';
+
+/// 🔥 BACKUP IMPORT
+import 'screens/services/backup_prefs.dart';
+import 'screens/services/google_drive_service.dart';
+
+/// 🔥 THEME CONTROLLER
+ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.system);
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await Firebase.initializeApp();
+
   PurchaseService.init();
+
   await AppStrings.loadLang();
+
+  /// 🔥 ADS INIT
   if (AppConfig.enableAds) {
     await MobileAds.instance.initialize();
     AdHelper.loadAd();
   }
-  // ✅ Edge-to-edge enable
+
+  /// 🔥 EDGE UI
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
 
   runApp(const TourKhataApp());
 }
 
-class TourKhataApp extends StatelessWidget {
+class TourKhataApp extends StatefulWidget {
   const TourKhataApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      scrollBehavior: const MaterialScrollBehavior().copyWith(
-        physics: const BouncingScrollPhysics(),
-      ),
-      title: AppInfo.appName,
-      debugShowCheckedModeBanner: false,
+  State<TourKhataApp> createState() => _TourKhataAppState();
+}
 
-      /// Themes
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.system,
+class _TourKhataAppState extends State<TourKhataApp> {
+  @override
+  void initState() {
+    super.initState();
 
-      // ✅ Dynamic system UI (PRO setup)
-      builder: (context, child) {
-        final isDark = Theme.of(context).brightness == Brightness.dark;
+    /// 🔥 AUTO BACKUP CHECK (safe delay)
+    Future.delayed(const Duration(milliseconds: 300), () {
+      _autoBackupCheck();
+    });
+  }
 
-        SystemChrome.setSystemUIOverlayStyle(
-          SystemUiOverlayStyle(
-            statusBarColor: Colors.transparent,
+  /// 🔥 SMART AUTO BACKUP (FINAL)
+  Future<void> _autoBackupCheck() async {
+    try {
+      bool enabled = await BackupPrefs.getAutoBackup();
+      if (!enabled) return;
 
-            statusBarIconBrightness: isDark
-                ? Brightness.light
-                : Brightness.dark,
-            statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
+      int last = await BackupPrefs.getLastBackup();
+      int now = DateTime.now().millisecondsSinceEpoch;
+      int userId = await UserHelper.getUserId();
 
-            systemNavigationBarColor: isDark ? Colors.black : Colors.white,
+      BackupFrequency freq = await BackupPrefs.getFrequency();
 
-            systemNavigationBarIconBrightness: isDark
-                ? Brightness.light
-                : Brightness.dark,
-          ),
+      int interval = 86400000; // daily
+
+      if (freq == BackupFrequency.weekly) {
+        interval = 7 * 86400000;
+      } else if (freq == BackupFrequency.monthly) {
+        interval = 30 * 86400000;
+      }
+
+      if (now - last > interval) {
+        await GoogleDriveService.uploadNow(
+          context,
+          userId: userId,
+          manual: false,
         );
+      }
+    } catch (e) {
+      // silent fail
+    }
+  }
 
-        return child!;
+  /// 🔥 NAVIGATOR KEY
+  final GlobalKey<NavigatorState> navigatorKey = GlobalKey();
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder(
+      valueListenable: themeNotifier,
+      builder: (context, ThemeMode currentMode, _) {
+        return MaterialApp(
+          navigatorKey: navigatorKey,
+          debugShowCheckedModeBanner: false,
+          title: AppInfo.appName,
+
+          scrollBehavior: const MaterialScrollBehavior().copyWith(
+            physics: const BouncingScrollPhysics(),
+          ),
+
+          /// 🔥 THEMES
+          theme: AppTheme.lightTheme,
+          darkTheme: AppTheme.darkTheme,
+          themeMode: currentMode,
+
+          /// 🔥 SYSTEM UI
+          builder: (context, child) {
+            final isDark =
+                Theme.of(context).brightness == Brightness.dark;
+
+            SystemChrome.setSystemUIOverlayStyle(
+              SystemUiOverlayStyle(
+                statusBarColor: Colors.transparent,
+                statusBarIconBrightness:
+                    isDark ? Brightness.light : Brightness.dark,
+                statusBarBrightness:
+                    isDark ? Brightness.dark : Brightness.light,
+                systemNavigationBarColor:
+                    isDark ? Colors.black : Colors.white,
+                systemNavigationBarIconBrightness:
+                    isDark ? Brightness.light : Brightness.dark,
+              ),
+            );
+
+            return child!;
+          },
+
+          home: SplashScreen(),
+        );
       },
-
-      home: SplashScreen(),
     );
   }
 }

@@ -34,7 +34,7 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
   List<int> selectedMembers = [];
 
   bool selectAll = false;
-
+  bool isChanged = false;
   int? adminId;
 
   @override
@@ -67,85 +67,87 @@ class _AddExpenseScreenState extends State<AddExpenseScreen> {
     });
   }
 
-List<String> suggestions = [
-  /// 🍔 FOOD
-  "Breakfast",
-  "Lunch",
-  "Dinner",
-  "Snacks",
-  "Tea / Coffee",
-  "Water bottles",
-  "Cold drinks",
-  "Street food",
-  "Sweets",
-  "Ice cream",
-  "Fruits",
+  List<String> suggestions = [
+    /// 🍔 FOOD
+    "Breakfast",
+    "Lunch",
+    "Dinner",
+    "Snacks",
+    "Roti",
+    "Tea / Coffee",
+    "Water bottles",
+    "Cold drinks",
+    "Street food",
+    "Sweets",
+    "Ice cream",
+    "Fruits",
+    "Jeep"
 
-  /// 🚗 TRAVEL
-  "Taxi fare",
-  "Auto ride",
-  "Bus tickets",
-  "Train tickets",
-  "Flight tickets",
-  "Petrol",
-  "Diesel",
-  "Toll tax",
-  "Parking",
-  "Bike rent",
-  "Car rent",
+    /// 🚗 TRAVEL
+    "Taxi fare",
+    "Auto ride",
+    "Bus tickets",
+    "Train tickets",
+    "Flight tickets",
+    "Petrol",
+    "Diesel",
+    "Toll tax",
+    "Parking",
+    "Bike",
+    "Car",
 
-  /// 🏨 STAY
-  "Hotel booking",
-  "Room rent",
-  "Resort stay",
-  "Guest house",
-  "Check-in payment",
-  "Extra bed",
-  "Room service",
+    /// 🏨 STAY
+    "Hotel booking",
+    "Room rent",
+    "Resort stay",
+    "Guest house",
+    "Check-in payment",
+    "Extra bed",
+    "Room service",
 
-  /// 🎉 FUN / ACTIVITIES
-  "Movie tickets",
-  "Adventure activities",
-  "Boat ride",
-  "Entry tickets",
-  "Theme park",
-  "Guide charges",
-  "Photography",
+    /// 🎉 FUN / ACTIVITIES
+    "Movie tickets",
+    "Adventure activities",
+    "Boat ride",
+    "Entry tickets",
+    "Theme park",
+    "Guide charges",
+    "Photography",
 
-  /// 🛍️ SHOPPING
-  "Shopping",
-  "Souvenirs",
-  "Clothes",
-  "Local items",
+    /// 🛍️ SHOPPING
+    "Shopping",
+    "Souvenirs",
+    "Clothes",
+    "Local items",
 
-  /// 💊 HEALTH
-  "Medical",
-  "Medicines",
-  "First aid",
-  "Doctor visit",
+    /// 💊 HEALTH
+    "Medical",
+    "Medicines",
+    "First aid",
+    "Doctor visit",
 
-  /// 🧾 DAILY USE
-  "Grocery",
-  "Daily items",
-  "Toiletries",
-  "Soap",
-  "Toothpaste",
-  "Shampoo",
-  "Tissue paper",
+    /// 🧾 DAILY USE
+    "Grocery",
+    "Daily items",
+    "Toiletries",
+    "Soap",
+    "Toothpaste",
+    "Shampoo",
+    "Tissue paper",
 
-  /// 🕌 RELIGIOUS / SPECIAL
-  "Parshad",
-  "Donation",
-  "Temple / Gurudwara",
+    /// 🕌 RELIGIOUS / SPECIAL
+    "Parshad",
+    "Donation",
+    "Temple / Gurudwara",
 
-  /// 🔌 UTILITIES
-  "Mobile recharge",
-  "Internet / WiFi",
-  "Charging",
+    /// 🔌 UTILITIES
+    "Mobile recharge",
+    "Internet / WiFi",
+    "Charging",
 
-  /// ❓ MISC
-  "Misc expense",
-];
+    /// ❓ MISC
+    "Misc expense",
+  ];
   Future<void> _loadCategories() async {
     await DBHelper.instance.createCategoryTable();
 
@@ -247,15 +249,18 @@ List<String> suggestions = [
     toCtrl.clear();
     selectedMembers.clear();
     travelDate = null;
-
+    isChanged = true;
     AppToast.success(context, AppStrings.get("expense_added"));
-
+    
     Future.delayed(const Duration(seconds: 2), () {
       if (context.mounted) {
         RatingService.trigger(context);
       }
     });
-    setState(() {});
+    setState(() {
+      selectedMembers.clear(); // 🔥 sab uncheck
+      selectAll = false; // 🔥 checkbox off
+    });
   }
 
   Future<void> _pickDate() async {
@@ -296,14 +301,28 @@ List<String> suggestions = [
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
+Widget build(BuildContext context) {
+  return WillPopScope(
+    onWillPop: () async {
+      Navigator.pop(context, isChanged); // 🔥 result send
+      return false;
+    },
+    child:  Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
+        leading: BackButton(
+    onPressed: () {
+      Navigator.pop(context, isChanged);
+    },
+  ),
         title: Text("${AppStrings.get("expense")} - ${widget.tripName}"),
         flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(colors: [Colors.teal, Colors.teal]),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+             colors: Theme.of(context).brightness == Brightness.dark
+    ? [Colors.grey.shade900, Colors.grey.shade900]
+    : [Colors.teal, Colors.teal],
+            ),
           ),
         ),
       ),
@@ -612,7 +631,6 @@ List<String> suggestions = [
               backgroundColor: Colors.teal,
               foregroundColor: Colors.white,
               padding: EdgeInsets.symmetric(vertical: 16),
-             
             ),
           ),
           SizedBox(height: 40),
@@ -624,6 +642,7 @@ List<String> suggestions = [
           SizedBox(height: 40),
         ],
       ),
-    );
+    ),
+  );
   }
 }

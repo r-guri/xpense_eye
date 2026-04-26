@@ -7,13 +7,20 @@ class AboutScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text("About App"),
-        backgroundColor: Colors.teal,
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: Theme.of(context).brightness == Brightness.dark
+                  ? [Colors.grey.shade900, Colors.grey.shade900]
+                  : [Colors.teal, Colors.teal],
+            ),
+          ),
+        ),
       ),
       body: Padding(
         padding: EdgeInsets.all(16),
         child: ListView(
           children: [
-
             /// TOP SECTION
             Center(
               child: Column(
@@ -28,26 +35,20 @@ class AboutScreen extends StatelessWidget {
                       ],
                     ),
                     child: Image.asset('assets/logo.png', height: 100),
-
                   ),
 
                   SizedBox(height: 12),
 
                   Text(
                     AppInfo.appName,
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                   ),
 
                   SizedBox(height: 4),
 
                   Text(
                     "Version ${AppInfo.version}",
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                    ),
+                    style: TextStyle(color: Colors.grey[600]),
                   ),
                 ],
               ),
@@ -58,10 +59,7 @@ class AboutScreen extends StatelessWidget {
             /// ABOUT TEXT
             Text(
               "About ${AppInfo.appName}",
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
 
             SizedBox(height: 8),
@@ -76,10 +74,7 @@ class AboutScreen extends StatelessWidget {
             /// FEATURES
             Text(
               "Key Features",
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
 
             SizedBox(height: 10),
@@ -101,10 +96,7 @@ class AboutScreen extends StatelessWidget {
             /// DEVELOPER
             Text(
               "Developer",
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
 
             SizedBox(height: 6),
@@ -124,10 +116,7 @@ class AboutScreen extends StatelessWidget {
             Center(
               child: Text(
                 "Thank you for using ${AppInfo.appName}",
-                style: TextStyle(
-                  color: Colors.grey,
-                  fontSize: 13,
-                ),
+                style: TextStyle(color: Colors.grey, fontSize: 13),
               ),
             ),
           ],

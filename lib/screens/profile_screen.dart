@@ -131,10 +131,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
         title:  Text(AppStrings.get("profile")),
 
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
+       flexibleSpace: Container(
+          decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [Colors.teal, Colors.teal],
+             colors: Theme.of(context).brightness == Brightness.dark
+    ? [Colors.grey.shade900, Colors.grey.shade900]
+    : [Colors.teal, Colors.teal],
             ),
           ),
         ),

@@ -7,7 +7,15 @@ class SupportScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text("Support"),
-        backgroundColor: Colors.teal,
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+             colors: Theme.of(context).brightness == Brightness.dark
+    ? [Colors.grey.shade900, Colors.grey.shade900]
+    : [Colors.teal, Colors.teal],
+            ),
+          ),
+        ),
       ),
       body: Padding(
         padding: EdgeInsets.all(16),

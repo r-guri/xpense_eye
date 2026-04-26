@@ -283,11 +283,10 @@ class _ReportScreenState extends State<ReportScreen> {
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-
+      backgroundColor: Theme.of(context).cardColor,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
       ),
-
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setModal) {
@@ -296,19 +295,34 @@ class _ReportScreenState extends State<ReportScreen> {
                 20,
                 20,
                 20,
-                MediaQuery.of(context).viewInsets.bottom + 30,
+                MediaQuery.of(context).viewInsets.bottom +
+                    MediaQuery.of(context).padding.bottom +
+                    20,
               ),
-
               child: SingleChildScrollView(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-
                   children: [
+                    /// 🔥 TOP HANDLE
+                    Center(
+                      child: Container(
+                        width: 50,
+                        height: 5,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade400,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 15),
+
+                    /// 🔥 TITLE
                     Center(
                       child: Text(
                         AppStrings.get("edit_expense"),
-                        style: TextStyle(
-                          fontSize: 18,
+                        style: const TextStyle(
+                          fontSize: 17,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -319,16 +333,15 @@ class _ReportScreenState extends State<ReportScreen> {
                     /// CATEGORY
                     DropdownButtonFormField<String>(
                       value: category,
-
-                      decoration: const InputDecoration(
-                        labelText: "Category",
-                        border: OutlineInputBorder(),
+                      decoration: InputDecoration(
+                        labelText: AppStrings.get("category"),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
-
                       items: categories.map((c) {
                         return DropdownMenuItem(value: c, child: Text(c));
                       }).toList(),
-
                       onChanged: (v) {
                         setModal(() => category = v!);
                       },
@@ -341,7 +354,9 @@ class _ReportScreenState extends State<ReportScreen> {
                       controller: descCtrl,
                       decoration: InputDecoration(
                         labelText: AppStrings.get("description"),
-                        border: OutlineInputBorder(),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                     ),
 
@@ -352,115 +367,142 @@ class _ReportScreenState extends State<ReportScreen> {
                       controller: amountCtrl,
                       keyboardType: TextInputType.number,
                       decoration: InputDecoration(
+                        prefixText: "₹ ",
                         labelText: AppStrings.get("amount"),
-                        border: OutlineInputBorder(),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                     ),
 
                     const SizedBox(height: 15),
 
-                    /// DATE
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            travelDate == null
-                                ? "Select Date"
-                                : DateFormat("dd-MM-yyyy").format(travelDate!),
+                    /// DATE CARD STYLE
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey.shade400),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.date_range,
+                            color: Theme.of(context).colorScheme.primary,
                           ),
-                        ),
-
-                        IconButton(
-                          icon: const Icon(Icons.date_range),
-
-                          onPressed: () async {
-                            DateTime? picked = await showDatePicker(
-                              context: context,
-
-                              initialDate: travelDate ?? DateTime.now(),
-
-                              firstDate: DateTime(2020),
-
-                              lastDate: DateTime(2030),
-                            );
-
-                            if (picked != null) {
-                              setModal(() => travelDate = picked);
-                            }
-                          },
-                        ),
-                      ],
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              travelDate == null
+                                  ? AppStrings.get("select_date")
+                                  : DateFormat(
+                                      "dd MMM yyyy",
+                                    ).format(travelDate!),
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () async {
+                              DateTime? picked = await showDatePicker(
+                                context: context,
+                                initialDate: travelDate ?? DateTime.now(),
+                                firstDate: DateTime(2020),
+                                lastDate: DateTime(2030),
+                              );
+                              if (picked != null) {
+                                setModal(() => travelDate = picked);
+                              }
+                            },
+                            child: Text(AppStrings.get("change")),
+                          ),
+                        ],
+                      ),
                     ),
 
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 15),
 
-                    /// SHOW ONLY IF TRAVEL CATEGORY
+                    /// TRAVEL EXTRA
                     if (category.toLowerCase() == "travel") ...[
                       TextField(
                         controller: fromCtrl,
-                        decoration: const InputDecoration(
-                          labelText: "From Location",
-                          border: OutlineInputBorder(),
+                        decoration: InputDecoration(
+                          labelText: "From",
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
                       ),
-
                       const SizedBox(height: 10),
-
                       TextField(
                         controller: toCtrl,
-                        decoration: const InputDecoration(
-                          labelText: "To Location",
-                          border: OutlineInputBorder(),
+                        decoration: InputDecoration(
+                          labelText: "To",
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
                       ),
-
                       const SizedBox(height: 15),
                     ],
 
-                    /// MEMBERS
+                    /// MEMBERS TITLE
                     const Text(
                       "Members",
-                      style: TextStyle(fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
                     ),
 
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 8),
 
+                    /// MEMBERS LIST
                     ...members.map((m) {
                       bool checked = selectedMembers.contains(m['id']);
 
-                      return CheckboxListTile(
-                        value: checked,
-
-                        title: Text(m['name']),
-
-                        onChanged: (val) {
-                          setModal(() {
-                            if (val == true) {
-                              selectedMembers.add(m['id']);
-                            } else {
-                              selectedMembers.remove(m['id']);
-                            }
-                          });
-                        },
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 6),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(10),
+                          color: Colors.grey.withOpacity(0.05),
+                        ),
+                        child: CheckboxListTile(
+                          value: checked,
+                          title: Text(m['name']),
+                          activeColor: Colors.teal,
+                          onChanged: (val) {
+                            setModal(() {
+                              if (val == true) {
+                                selectedMembers.add(m['id']);
+                              } else {
+                                selectedMembers.remove(m['id']);
+                              }
+                            });
+                          },
+                        ),
                       );
                     }).toList(),
 
                     const SizedBox(height: 20),
 
-                    /// UPDATE BUTTON
+                    /// 🔥 UPDATE BUTTON
                     SizedBox(
                       width: double.infinity,
-
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.teal,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30),
+                          ),
                         ),
-
                         onPressed: () async {
                           await DBHelper.instance.update(
                             'expenses',
-
                             {
                               'description': descCtrl.text,
                               'amount': double.tryParse(amountCtrl.text),
@@ -470,7 +512,6 @@ class _ReportScreenState extends State<ReportScreen> {
                               'travelDate': travelDate?.toIso8601String(),
                               'members': selectedMembers.join(','),
                             },
-
                             'id = ?',
                             [expense['id']],
                           );
@@ -484,10 +525,12 @@ class _ReportScreenState extends State<ReportScreen> {
 
                           _loadReport();
                         },
-
                         child: Text(
                           AppStrings.get("update_expense"),
-                          style: TextStyle(color: Colors.white),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 15,
+                          ),
                         ),
                       ),
                     ),
@@ -506,7 +549,8 @@ class _ReportScreenState extends State<ReportScreen> {
   void _openMemberSelector() {
     showModalBottomSheet(
       context: context,
-
+      isScrollControlled: true, // 🔥 IMPORTANT
+      backgroundColor: Theme.of(context).cardColor,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -515,86 +559,99 @@ class _ReportScreenState extends State<ReportScreen> {
         return StatefulBuilder(
           builder: (context, setModalState) {
             return Padding(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.fromLTRB(
+                16,
+                16,
+                16,
+                MediaQuery.of(context).viewInsets.bottom +
+                    MediaQuery.of(context).padding.bottom +
+                    16, // 🔥 FIX
+              ),
 
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
+              child: SingleChildScrollView(
+                // 🔥 IMPORTANT
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
 
-                children: [
-                  Text(
-                    AppStrings.get("select_members"),
-                    style: TextStyle(
-                      fontSize: 18,
-                      color: Colors.teal,
-                      fontWeight: FontWeight.bold,
+                  children: [
+                    /// TITLE
+                    Text(
+                      AppStrings.get("select_members"),
+                      style: const TextStyle(
+                        fontSize: 16,
+                        color: Colors.teal,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
 
-                  const SizedBox(height: 10),
+                    const SizedBox(height: 10),
 
-                  CheckboxListTile(
-                    value: selectAll,
-
-                    title: Text(AppStrings.get("all_members")),
-
-                    onChanged: (val) {
-                      setModalState(() {
-                        selectAll = val!;
-
-                        if (selectAll) {
-                          selectedMembers = members
-                              .map((m) => m['id'] as int)
-                              .toList();
-                        } else {
-                          selectedMembers.clear();
-                        }
-                      });
-
-                      setState(() {});
-                    },
-                  ),
-
-                  const Divider(),
-
-                  ...members.map((m) {
-                    bool selected = selectedMembers.contains(m['id']);
-
-                    return CheckboxListTile(
-                      value: selected,
-
-                      title: Text(m['name']),
-
+                    /// SELECT ALL
+                    CheckboxListTile(
+                      value: selectAll,
+                     
+                      title: Text(AppStrings.get("all_members")),
                       onChanged: (val) {
                         setModalState(() {
-                          selectAll = false;
+                          selectAll = val!;
 
-                          if (val == true) {
-                            selectedMembers.add(m['id']);
+                          if (selectAll) {
+                            selectedMembers = members
+                                .map((m) => m['id'] as int)
+                                .toList();
                           } else {
-                            selectedMembers.remove(m['id']);
+                            selectedMembers.clear();
                           }
                         });
 
                         setState(() {});
                       },
-                    );
-                  }).toList(),
-
-                  SizedBox(height: 10),
-
-                  ElevatedButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                    },
-                    child: Text(AppStrings.get("ok")),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.teal,
-                      foregroundColor: Colors.white,
-                      padding: EdgeInsets.symmetric(vertical: 16),
                     ),
-                  ),
-                  SizedBox(height: 30),
-                ],
+
+                    const Divider(),
+
+                    /// MEMBERS LIST
+                    ...members.map((m) {
+                      bool selected = selectedMembers.contains(m['id']);
+
+                      return CheckboxListTile(
+                        value: selected,
+                        title: Text(m['name']),
+                        onChanged: (val) {
+                          setModalState(() {
+                            selectAll = false;
+
+                            if (val == true) {
+                              selectedMembers.add(m['id']);
+                            } else {
+                              selectedMembers.remove(m['id']);
+                            }
+                          });
+
+                          setState(() {});
+                        },
+                      );
+                    }).toList(),
+
+                    const SizedBox(height: 10),
+
+                    /// BUTTON
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.pop(context);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.teal,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        child: Text(AppStrings.get("ok")),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             );
           },
@@ -787,8 +844,12 @@ class _ReportScreenState extends State<ReportScreen> {
         title: Text("${widget.tripName}"),
 
         flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(colors: [Colors.teal, Colors.teal]),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: Theme.of(context).brightness == Brightness.dark
+                  ? [Colors.grey.shade900, Colors.grey.shade900]
+                  : [Colors.teal, Colors.teal],
+            ),
           ),
         ),
       ),
@@ -831,7 +892,7 @@ class _ReportScreenState extends State<ReportScreen> {
                   ],
                 ),
 
-                const SizedBox(height: 16),
+                const SizedBox(height: 10),
 
                 /// SETTLEMENT BUTTON
                 SizedBox(
@@ -867,12 +928,12 @@ class _ReportScreenState extends State<ReportScreen> {
                   ),
                 ),
 
-                const SizedBox(height: 20),
+                const SizedBox(height: 10),
 
                 Text(
                   AppStrings.get("member_expense_details"),
                   style: TextStyle(
-                    fontSize: 18,
+                    fontSize: 15,
                     fontWeight: FontWeight.bold,
                     color: Colors.teal,
                   ),
@@ -882,12 +943,12 @@ class _ReportScreenState extends State<ReportScreen> {
 
                 _memberTable(),
 
-                const SizedBox(height: 20),
+                const SizedBox(height: 10),
 
                 Text(
                   AppStrings.get("expense_list"),
                   style: TextStyle(
-                    fontSize: 18,
+                    fontSize: 15,
                     fontWeight: FontWeight.bold,
                     color: Colors.teal,
                   ),
@@ -940,7 +1001,7 @@ class _ReportScreenState extends State<ReportScreen> {
                               "₹${(e['amount'] ?? 0).toStringAsFixed(0)}",
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
-                                fontSize: 16,
+                                fontSize: 15,
                                 color: Colors.teal,
                               ),
                             ),

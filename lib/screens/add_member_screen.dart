@@ -23,7 +23,7 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
   bool isAdmin = false;
   int? editingMemberId;
   bool adminExists = false;
-
+  bool isChanged = false;
   List<Map<String, dynamic>> members = [];
   bool get isEditingAdmin {
     if (editingMemberId == null) return false;
@@ -109,7 +109,7 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
     payCtrl.clear();
     editingMemberId = null;
     isAdmin = false;
-
+    isChanged = true;
     await _loadMembers();
     AppToast.success(context, AppStrings.get("member_saved"));
   }
@@ -124,6 +124,7 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
 
   Future<void> _deleteMember(int id) async {
     await DBHelper.instance.delete('members', 'id = ?', [id]);
+    isChanged = true; // 🔥 ADD THIS
     await _loadMembers();
   }
 
@@ -165,14 +166,27 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return WillPopScope(
+  onWillPop: () async {
+    Navigator.pop(context, isChanged); // 🔥 send result
+    return false;
+  },
+  child: Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text("${AppStrings.get("members")} - ${widget.tripName}"),
-
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(colors: [Colors.teal, Colors.teal]),
+        leading: BackButton(
+    onPressed: () {
+      Navigator.pop(context, isChanged);
+    },
+  ),
+      flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+             colors: Theme.of(context).brightness == Brightness.dark
+    ? [Colors.grey.shade900, Colors.grey.shade900]
+    : [Colors.teal, Colors.teal],
+            ),
           ),
         ),
       ),
@@ -409,6 +423,7 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
           ],
         ),
       ),
+    ),
     );
   }
 }

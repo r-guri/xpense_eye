@@ -22,9 +22,11 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'services/purchase_service.dart';
 import 'services/rating_service.dart';
 import 'services/review_service.dart';
+import 'settings_screen.dart';
 // import 'ads/banner_ad_widget.dart';
 import 'ads/ad_helper.dart';
 import '../utils/app_strings.dart';
+import 'analytics_screen.dart';
 
 // import '../utils/google_drive_backup.dart';
 class DashboardScreen extends StatefulWidget {
@@ -75,7 +77,10 @@ class _LanguageDropdownState extends State<LanguageDropdown> {
 class _DashboardScreenState extends State<DashboardScreen> {
   List<Map<String, dynamic>> trips = [];
   Map<int, double> tripDeposits = {};
+  Map<int, double> tripExpenses = {};
+  Map<int, int> tripMembersCount = {};
   int totalMembers = 0;
+  int currentIndex = 0;
   double totalExpense = 0;
   double totalDeposit = 0;
   int _selectedIndex = 0;
@@ -228,8 +233,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
     double sumExpense = 0;
 
+    tripExpenses.clear();
+    tripMembersCount.clear();
+
     for (var e in expenses) {
-      sumExpense += (e['amount'] ?? 0);
+      int tripId = e['tripId'];
+      double amt = (e['amount'] ?? 0).toDouble();
+
+      sumExpense += amt;
+      tripExpenses[tripId] = (tripExpenses[tripId] ?? 0) + amt;
+    }
+
+    for (var m in members) {
+      int tripId = m['tripId'];
+      tripMembersCount[tripId] = (tripMembersCount[tripId] ?? 0) + 1;
     }
 
     setState(() {
@@ -287,7 +304,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _getBody() {
     if (_selectedIndex == 1) {
-      return AddTripScreen(userId: widget.userId);
+      return AnalyticsScreen(tripId: 0); // 🔥 NEW
     }
 
     if (_selectedIndex == 2) {
@@ -299,8 +316,45 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
 
     return ListView(
-      physics: const AlwaysScrollableScrollPhysics(), // 👈 IMPORTANT
+      physics: const AlwaysScrollableScrollPhysics(),
       children: [_buildStats(), _recentExpenses(), _buildTripList()],
+    );
+  }
+
+  Widget _navItem({
+    required IconData icon,
+    required String label,
+    required int index,
+  }) {
+    final isSelected = _selectedIndex == index;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        splashColor: Colors.teal.withOpacity(0.2),
+        highlightColor: Colors.transparent,
+        onTap: () {
+          if (_selectedIndex != index) {
+            setState(() => _selectedIndex = index);
+          }
+        },
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 26, color: isSelected ? Colors.teal : Colors.grey),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                color: isSelected ? Colors.teal : Colors.grey,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -325,7 +379,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               child: Text(
                 value,
                 style: const TextStyle(
-                  fontSize: 18,
+                  fontSize: 14,
                   fontWeight: FontWeight.bold,
                   color: Colors.teal,
                 ),
@@ -404,7 +458,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               child: Text(
                 AppStrings.get("recent_expenses"),
                 style: TextStyle(
-                  fontSize: 15,
+                  fontSize: 14,
                   fontWeight: FontWeight.bold,
                   color: Colors.teal,
                 ),
@@ -446,7 +500,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               backgroundColor: Colors.teal.shade100,
                               child: Icon(
                                 _categoryIcon(e['category']),
-                                size: 16,
+                                size: 14,
                                 color: Colors.teal,
                               ),
                             ),
@@ -470,6 +524,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
+                            fontSize: 12,
                             fontWeight: FontWeight.w600,
                             color: Colors.teal,
                           ),
@@ -527,416 +582,366 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildTripCard(Map<String, dynamic> t) {
-    return FutureBuilder(
-      future: Future.wait([
-        DBHelper.instance.getAll(
-          'expenses',
-          where: 'tripId = ?',
-          whereArgs: [t['id']],
-        ),
+    double totalExpense = tripExpenses[t['id']] ?? 0;
+    double totalDeposit = tripDeposits[t['id']] ?? 0;
+    int memberCount = tripMembersCount[t['id']] ?? 0;
 
-        DBHelper.instance.getAll(
-          'members',
-          where: 'tripId = ?',
-          whereArgs: [t['id']],
-        ),
-      ]),
+    double perPerson = memberCount == 0 ? 0 : totalExpense / memberCount;
 
-      builder: (context, AsyncSnapshot<List<dynamic>> snap) {
-        double totalExpense = 0;
-        double totalDeposit = tripDeposits[t['id']] ?? 0;
-        int memberCount = 0;
-        if (snap.hasData) {
-          List<Map<String, dynamic>> expenses = List<Map<String, dynamic>>.from(
-            snap.data![0],
-          );
-
-          List<Map<String, dynamic>> members = List<Map<String, dynamic>>.from(
-            snap.data![1],
-          );
-
-          memberCount = members.length;
-
-          for (var e in expenses) {
-            totalExpense += (e['amount'] ?? 0);
-          }
-        }
-
-        double perPerson = memberCount == 0 ? 0 : totalExpense / memberCount;
-
-        return InkWell(
-          borderRadius: BorderRadius.circular(15),
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) =>
-                    ReportScreen(tripId: t['id'], tripName: t['name']),
-              ),
-            );
-          },
-          child: Stack(
-            children: [
-              Container(
-                margin: const EdgeInsets.symmetric(vertical: 8),
-
-                padding: const EdgeInsets.all(14),
-
-                decoration: BoxDecoration(
-                  color: Theme.of(context).cardColor,
-
-                  borderRadius: BorderRadius.circular(14),
-
-                  boxShadow: const [
-                    BoxShadow(color: Colors.black12, blurRadius: 6),
-                  ],
-                ),
-
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-
+    return InkWell(
+      borderRadius: BorderRadius.circular(15),
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ReportScreen(tripId: t['id'], tripName: t['name']),
+          ),
+        );
+      },
+      child: Stack(
+        children: [
+          Container(
+            margin: const EdgeInsets.symmetric(vertical: 8),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Theme.of(context).cardColor,
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: const [
+                BoxShadow(color: Colors.black12, blurRadius: 6),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                /// NAME + AMOUNT
+                Row(
                   children: [
-                    /// TRIP NAME ROW
-                    Row(
-                      children: [
-                        const Icon(Icons.card_travel, color: Colors.teal),
+                    const Icon(Icons.card_travel, color: Colors.teal),
+                    const SizedBox(width: 6),
 
-                        const SizedBox(width: 6),
-
-                        Expanded(
-                          child: Text(
-                            t['name'] ?? "",
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.teal,
-                            ),
-                          ),
-                        ),
-
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 4,
-                          ),
-
-                          decoration: BoxDecoration(
-                            color: Colors.teal.shade50,
-
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-
-                          child: Text(
-                            "₹${totalExpense.toStringAsFixed(0)}",
-                            style: const TextStyle(
-                              color: Colors.teal,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                        SizedBox(width: 6),
-
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.orange.shade50,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(
-                            "₹${totalDeposit.toStringAsFixed(0)}",
-                            style: const TextStyle(
-                              color: Colors.orange,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 28),
-                      ],
-                    ),
-
-                    const SizedBox(height: 6),
-
-                    /// DESTINATION
-                    Row(
-                      children: [
-                        const Icon(
-                          Icons.location_on,
-                          size: 16,
-                          color: Colors.grey,
+                    /// 🔥 NAME
+                    Expanded(
+                      child: Text(
+                        t['name'] ?? "",
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 15,
                           fontWeight: FontWeight.bold,
+                          color: Colors.teal,
                         ),
-
-                        const SizedBox(width: 4),
-
-                        Text(
-                          t['destination'] ?? "",
-                          style: TextStyle(color: Colors.grey[700]),
-                        ),
-                      ],
+                      ),
                     ),
 
-                    const SizedBox(height: 5),
+                    /// 🔥 GAP PUSHER (IMPORTANT)
+                    const SizedBox(width: 10),
 
-                    /// DATE
-                    Text(
-                      "${_formatDate(t['startDate'])} → ${_formatDate(t['endDate'])}",
-                      style: TextStyle(color: Colors.grey[600], fontSize: 14),
-                    ),
-
-                    const SizedBox(height: 5),
-
-                    /// STATS ROW
-                    Row(
-                      children: [
-                        Icon(Icons.group, size: 16, color: Colors.grey[600]),
-
-                        const SizedBox(width: 4),
-
-                        Text("$memberCount ${AppStrings.get('members')}"),
-
-                        const SizedBox(width: 16),
-
-                        // Icon(Icons.currency_rupee,
-                        //     size:16,
-                        //     color:Colors.grey[600]),
-
-                        // const SizedBox(width:2),
-
-                        // Text(
-                        //   "Per Person ₹${perPerson.toStringAsFixed(0)}",
-                        // ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 12),
-
-                    /// BUTTONS
-                    Row(
-                      children: [
-                        _actionBtn(Icons.group, AppStrings.get("members"), () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => AddMemberScreen(
-                                tripId: t['id'],
-                                tripName: t['name'],
+                    /// 🔥 AMOUNTS WITH SAFE SPACE FOR 3 DOT
+                    Padding(
+                      padding: const EdgeInsets.only(
+                        right: 30,
+                      ), // space for menu
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.teal.shade50,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              "₹${totalExpense.toStringAsFixed(0)}",
+                              style: const TextStyle(
+                                color: Colors.teal,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
-                          );
-                        }),
-
-                        const SizedBox(width: 8),
-
-                        _actionBtn(
-                          Icons.currency_rupee,
-                          AppStrings.get("expense"),
-                          () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => AddExpenseScreen(
-                                  tripId: t['id'],
-                                  tripName: t['name'],
-                                ),
+                          ),
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.orange.shade50,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              "₹${totalDeposit.toStringAsFixed(0)}",
+                              style: const TextStyle(
+                                color: Colors.orange,
+                                fontWeight: FontWeight.bold,
                               ),
-                            );
-                          },
-                        ),
-                      ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
-              ),
+                const SizedBox(height: 6),
 
-              /// THREE DOT MENU
-              Positioned(
-                top: 4,
-                right: 4,
+                /// DESTINATION
+                Row(
+                  children: [
+                    const Icon(Icons.location_on, size: 16, color: Colors.grey),
+                    const SizedBox(width: 4),
+                    Text(
+                      t['destination'] ?? "",
+                      style: TextStyle(color: Colors.grey[700]),
+                    ),
+                  ],
+                ),
 
-                child: PopupMenuButton<String>(
-                  onSelected: (value) async {
-                    if (value == "view") {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => ReportScreen(
-                            tripId: t['id'],
-                            tripName: t['name'],
+                const SizedBox(height: 5),
+
+                /// DATE
+                Text(
+                  "${_formatDate(t['startDate'])} → ${_formatDate(t['endDate'])}",
+                  style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                ),
+
+                const SizedBox(height: 5),
+
+                /// MEMBERS
+                Row(
+                  children: [
+                    Icon(Icons.group, size: 16, color: Colors.grey[600]),
+                    const SizedBox(width: 4),
+                    Text("$memberCount ${AppStrings.get('members')}"),
+                  ],
+                ),
+
+                const SizedBox(height: 12),
+
+                /// BUTTONS
+                Row(
+                  children: [
+                    _actionBtn(
+                      Icons.group,
+                      AppStrings.get("members"),
+                      () async {
+                        final result = await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => AddMemberScreen(
+                              tripId: t['id'],
+                              tripName: t['name'],
+                            ),
+                          ),
+                        );
+                        if (result == true) {
+                          Future.delayed(
+                            const Duration(milliseconds: 100),
+                            () => _loadTrips(),
+                          );
+                        }
+                      },
+                    ),
+                    const SizedBox(width: 8),
+                    _actionBtn(
+                      Icons.currency_rupee,
+                      AppStrings.get("expense"),
+                      () async {
+                        final result = await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => AddExpenseScreen(
+                              tripId: t['id'],
+                              tripName: t['name'],
+                            ),
+                          ),
+                        );
+                        if (result == true) {
+                          Future.delayed(
+                            const Duration(milliseconds: 100),
+                            () => _loadTrips(),
+                          );
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          SizedBox(width: 40),
+
+          /// THREE DOT MENU
+          Positioned(
+            top: 8,
+            right: 8,
+
+            child: PopupMenuButton<String>(
+              onSelected: (value) async {
+                if (value == "view") {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          ReportScreen(tripId: t['id'], tripName: t['name']),
+                    ),
+                  );
+                }
+
+                if (value == "delete") {
+                  bool confirm = await showDialog(
+                    context: context,
+
+                    builder: (context) => AlertDialog(
+                      title: const Text("Delete"),
+
+                      content: const Text(
+                        "Are you sure you want to delete this expense?\nAll members and expenses will also be deleted.",
+                      ),
+
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, false),
+                          child: const Text("Cancel"),
+                        ),
+
+                        ElevatedButton(
+                          onPressed: () => Navigator.pop(context, true),
+                          child: const Text("Delete"),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red,
                           ),
                         ),
-                      );
-                    }
+                      ],
+                    ),
+                  );
 
-                    if (value == "delete") {
-                      bool confirm = await showDialog(
-                        context: context,
+                  if (confirm) {
+                    await DBHelper.instance.delete('members', 'tripId = ?', [
+                      t['id'],
+                    ]);
 
-                        builder: (context) => AlertDialog(
-                          title: const Text("Delete"),
+                    await DBHelper.instance.delete('expenses', 'tripId = ?', [
+                      t['id'],
+                    ]);
 
-                          content: const Text(
-                            "Are you sure you want to delete this expense?\nAll members and expenses will also be deleted.",
-                          ),
+                    await DBHelper.instance.delete('categories', 'tripId = ?', [
+                      t['id'],
+                    ]);
 
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(context, false),
-                              child: const Text("Cancel"),
+                    await DBHelper.instance.delete('trips', 'id = ?', [
+                      t['id'],
+                    ]);
+
+                    _loadTrips();
+                  }
+                }
+                if (value == "edit") {
+                  TextEditingController nameCtrl = TextEditingController(
+                    text: t['name'],
+                  );
+
+                  TextEditingController destCtrl = TextEditingController(
+                    text: t['destination'],
+                  );
+
+                  await showDialog(
+                    context: context,
+
+                    builder: (context) {
+                      return AlertDialog(
+                        title: Text("Edit"),
+
+                        content: Column(
+                          mainAxisSize: MainAxisSize.min,
+
+                          children: [
+                            TextField(
+                              controller: nameCtrl,
+                              decoration: InputDecoration(labelText: "Name"),
                             ),
 
-                            ElevatedButton(
-                              onPressed: () => Navigator.pop(context, true),
-                              child: const Text("Delete"),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.red,
+                            SizedBox(height: 10),
+
+                            TextField(
+                              controller: destCtrl,
+                              decoration: InputDecoration(
+                                labelText: "Destination",
                               ),
                             ),
                           ],
                         ),
-                      );
 
-                      if (confirm) {
-                        await DBHelper.instance.delete(
-                          'members',
-                          'tripId = ?',
-                          [t['id']],
-                        );
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: Text("Cancel"),
+                          ),
 
-                        await DBHelper.instance.delete(
-                          'expenses',
-                          'tripId = ?',
-                          [t['id']],
-                        );
+                          ElevatedButton(
+                            onPressed: () async {
+                              await DBHelper.instance.update(
+                                'trips',
 
-                        await DBHelper.instance.delete(
-                          'categories',
-                          'tripId = ?',
-                          [t['id']],
-                        );
-
-                        await DBHelper.instance.delete('trips', 'id = ?', [
-                          t['id'],
-                        ]);
-
-                        _loadTrips();
-                      }
-                    }
-                    if (value == "edit") {
-                      TextEditingController nameCtrl = TextEditingController(
-                        text: t['name'],
-                      );
-
-                      TextEditingController destCtrl = TextEditingController(
-                        text: t['destination'],
-                      );
-
-                      await showDialog(
-                        context: context,
-
-                        builder: (context) {
-                          return AlertDialog(
-                            title: Text("Edit"),
-
-                            content: Column(
-                              mainAxisSize: MainAxisSize.min,
-
-                              children: [
-                                TextField(
-                                  controller: nameCtrl,
-                                  decoration: InputDecoration(
-                                    labelText: "Name",
-                                  ),
-                                ),
-
-                                SizedBox(height: 10),
-
-                                TextField(
-                                  controller: destCtrl,
-                                  decoration: InputDecoration(
-                                    labelText: "Destination",
-                                  ),
-                                ),
-                              ],
-                            ),
-
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(context),
-                                child: Text("Cancel"),
-                              ),
-
-                              ElevatedButton(
-                                onPressed: () async {
-                                  await DBHelper.instance.update(
-                                    'trips',
-
-                                    {
-                                      'name': nameCtrl.text,
-                                      'destination': destCtrl.text,
-                                    },
-
-                                    'id = ?',
-                                    [t['id']],
-                                  );
-
-                                  Navigator.pop(context);
-
-                                  _loadTrips();
+                                {
+                                  'name': nameCtrl.text,
+                                  'destination': destCtrl.text,
                                 },
 
-                                child: Text("Update"),
-                              ),
-                            ],
-                          );
-                        },
+                                'id = ?',
+                                [t['id']],
+                              );
+
+                              Navigator.pop(context);
+
+                              _loadTrips();
+                            },
+
+                            child: Text("Update"),
+                          ),
+                        ],
                       );
-                    }
-                  },
-                  itemBuilder: (context) => [
-                    PopupMenuItem(
-                      value: "view",
-                      child: Row(
-                        children: [
-                          Icon(Icons.bar_chart, color: Colors.teal),
-                          SizedBox(width: 8),
-                          Text(AppStrings.get('view_report')),
-                        ],
-                      ),
-                    ),
-
-                    PopupMenuItem(
-                      value: "edit",
-                      child: Row(
-                        children: [
-                          Icon(Icons.edit, color: Colors.blue),
-                          SizedBox(width: 8),
-                          Text(AppStrings.get("edit")),
-                        ],
-                      ),
-                    ),
-
-                    PopupMenuItem(
-                      value: "delete",
-                      child: Row(
-                        children: [
-                          Icon(Icons.delete, color: Colors.red),
-                          SizedBox(width: 8),
-                          Text(AppStrings.get("delete")),
-                        ],
-                      ),
-                    ),
-                  ],
+                    },
+                  );
+                }
+              },
+              itemBuilder: (context) => [
+                PopupMenuItem(
+                  value: "view",
+                  child: Row(
+                    children: [
+                      Icon(Icons.bar_chart, color: Colors.teal),
+                      SizedBox(width: 8),
+                      Text(AppStrings.get('view_report')),
+                    ],
+                  ),
                 ),
-              ),
-              SizedBox(height: 40),
-            ],
-            // );
+
+                PopupMenuItem(
+                  value: "edit",
+                  child: Row(
+                    children: [
+                      Icon(Icons.edit, color: Colors.blue),
+                      SizedBox(width: 8),
+                      Text(AppStrings.get("edit")),
+                    ],
+                  ),
+                ),
+
+                PopupMenuItem(
+                  value: "delete",
+                  child: Row(
+                    children: [
+                      Icon(Icons.delete, color: Colors.red),
+                      SizedBox(width: 8),
+                      Text(AppStrings.get("delete")),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
-        );
-      },
+        ],
+      ),
     );
   }
 
@@ -987,27 +992,38 @@ class _DashboardScreenState extends State<DashboardScreen> {
             },
           ),
         ],
+
+        /// 🔥 DARK MODE CHECK
         flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(colors: [Colors.teal, Colors.teal]),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: Theme.of(context).brightness == Brightness.dark
+                  ? [Colors.grey.shade900, Colors.grey.shade900]
+                  : [Colors.teal, Colors.teal],
+            ),
           ),
         ),
       ),
       drawer: Drawer(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         child: Column(
           children: [
             UserAccountsDrawerHeader(
               accountName: Text(widget.userName),
-
               accountEmail: Text(""),
-
               currentAccountPicture: CircleAvatar(
                 backgroundColor: Colors.white,
 
                 child: Icon(Icons.person, size: 40, color: Colors.teal),
               ),
 
-              decoration: BoxDecoration(color: Colors.teal),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: Theme.of(context).brightness == Brightness.dark
+                      ? [Colors.grey.shade900, Colors.grey.shade900] // 🌙 dark
+                      : [Colors.teal, Colors.teal], // ☀️ light
+                ),
+              ),
             ),
 
             ListTile(
@@ -1217,6 +1233,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
               },
             ),
             ListTile(
+              leading: Icon(Icons.settings, color: Colors.teal),
+              title: Text("Settings"),
+              onTap: () {
+                Navigator.pop(context); // drawer close
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => SettingsScreen(userId: widget.userId),
+                  ),
+                );
+              },
+            ),
+            ListTile(
               leading: Icon(Icons.logout, color: Colors.red),
 
               title: Text(AppStrings.get('logout')),
@@ -1300,15 +1329,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
           : _getBody(),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
-          await Navigator.push(
+          final result = await Navigator.push(
             context,
-
             MaterialPageRoute(
               builder: (_) => AddTripScreen(userId: widget.userId),
             ),
           );
 
-          _loadTrips();
+          if (result == true) {
+            _loadTrips();
+          }
         },
 
         backgroundColor: Colors.teal,
@@ -1320,34 +1350,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
       bottomNavigationBar: BottomAppBar(
         shape: const CircularNotchedRectangle(),
-
-        notchMargin: 6,
-
+        notchMargin: 8,
+        elevation: 10,
+        color: Theme.of(context).cardColor,
         child: SizedBox(
-          height: 60,
-
+          height: 65,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
-
             children: [
-              IconButton(
-                icon: Icon(
-                  Icons.dashboard_outlined,
-                  color: _selectedIndex == 0 ? Colors.teal : Colors.grey,
-                ),
+              _navItem(icon: Icons.home_rounded, label: "Home", index: 0),
 
-                onPressed: () => setState(() => _selectedIndex = 0),
-              ),
+              const SizedBox(width: 40), // FAB space
 
-              const SizedBox(width: 50),
-
-              IconButton(
-                icon: Icon(
-                  Icons.person_outline,
-                  color: _selectedIndex == 2 ? Colors.teal : Colors.grey,
-                ),
-
-                onPressed: () => setState(() => _selectedIndex = 2),
+              _navItem(
+                icon: Icons.analytics_rounded,
+                label: "Analytics",
+                index: 1,
               ),
             ],
           ),

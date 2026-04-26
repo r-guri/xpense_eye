@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../db_helper.dart';
-
+import '../utils/app_strings.dart';
 class SettlementScreen extends StatefulWidget {
 
   final int tripId;
@@ -99,10 +99,10 @@ void _calculateSettlement(){
 
   settlements.clear();
 
-  // var admin =
-  //     members.firstWhere((m) => m['isAdmin'] == 1);
+  var admin =
+      members.firstWhere((m) => m['isAdmin'] == 1);
 
-  // String adminName = admin['name'];
+  String adminName = admin['name'];
 
   for(var m in members){
 
@@ -112,22 +112,32 @@ void _calculateSettlement(){
 
     double deposit = memberDeposits[id] ?? 0;
     double share = memberShares[id] ?? 0;
-
     double balance = deposit - share;
-
     if(balance > 0){
+String fromName = adminName;
+String toName = m['name'];
+double amount = balance;
 
-      settlements.add(
-        "Admin pays ₹${balance.toStringAsFixed(0)} to ${m['name']}"
-      );
+String text = AppStrings.get("gives_money")
+    .replaceAll("{from}", fromName)
+    .replaceAll("{to}", toName)
+    .replaceAll("{amount}", amount.toStringAsFixed(0));
 
+settlements.add(text);
     }
 
     if(balance < 0){
 
-      settlements.add(
-        "${m['name']} pays ₹${balance.abs().toStringAsFixed(0)} to Admin"
-      );
+     String fromName = m['name'];
+String toName = adminName;
+double amount = balance.abs();
+
+String text = AppStrings.get("gives_money")
+    .replaceAll("{from}", fromName)
+    .replaceAll("{to}", toName)
+    .replaceAll("{amount}", amount.toStringAsFixed(0));
+
+settlements.add(text);
 
     }
 
@@ -140,8 +150,18 @@ void _calculateSettlement(){
     return Scaffold(
 
       appBar: AppBar(
-        title: Text("Settlement - ${widget.tripName}"),
-        backgroundColor: Colors.teal,
+  title: Text(
+  "${AppStrings.get("settlement_title")} - ${widget.tripName}"
+),
+   flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+             colors: Theme.of(context).brightness == Brightness.dark
+    ? [Colors.grey.shade900, Colors.grey.shade900]
+    : [Colors.teal, Colors.teal],
+            ),
+          ),
+        ),
       ),
 
       body: settlements.isEmpty
